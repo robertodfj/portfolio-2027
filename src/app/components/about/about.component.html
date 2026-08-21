@@ -1,0 +1,15 @@
+<section id="about" class="about">
+  <p class="eyebrow" data-reveal>sobre-mi.md</p>
+  <h2 class="section-title" data-reveal>Más allá del código</h2>
+  <p class="about__lead" data-reveal>
+    Me gusta construir cosas, aprender constantemente y llevar los proyectos
+    que tengo en mente a la realidad.
+  </p>
+
+  <ul class="about__traits">
+    <li class="about__trait" data-reveal *ngFor="let t of traits">
+      <span class="about__trait-label">{{ t.label }}</span>
+      <span class="about__trait-detail">{{ t.detail }}</span>
+    </li>
+  </ul>
+</section>

@@ -1,0 +1,23 @@
+<section id="contact" class="contact">
+  <p class="eyebrow" data-reveal>contacto.send()</p>
+  <h2 class="contact__title" data-reveal>¿Tienes un proyecto<br />en mente?</h2>
+  <p class="contact__lead" data-reveal>
+    Estoy buscando mi siguiente reto como desarrollador Full Stack.
+    Hablemos.
+  </p>
+
+  <a class="btn btn--solid contact__cta" data-reveal [href]="'mailto:' + email">
+    Contactar ↗
+  </a>
+
+  <div class="contact__links" data-reveal>
+    <a [href]="githubUrl" target="_blank" rel="noopener">GitHub</a>
+    <a [href]="linkedinUrl" target="_blank" rel="noopener">LinkedIn</a>
+    <a [href]="'mailto:' + email">{{ email }}</a>
+  </div>
+
+  <footer class="contact__footer" data-reveal>
+    <span>Roberto de Frutos Jiménez — {{ 2026 }}</span>
+    <span>Angular · Three.js · GSAP</span>
+  </footer>
+</section>

@@ -1,0 +1,19 @@
+<header class="nav">
+  <div class="nav__progress" [style.width.%]="progress()"></div>
+
+  <a class="nav__brand" href="#top" (click)="goTo('top')">
+    <span class="nav__cursor" aria-hidden="true"></span>
+    rdf<span class="nav__dim">.dev</span>
+  </a>
+
+  <nav class="nav__links" [class.nav__links--open]="menuOpen()" aria-label="Navegación principal">
+    <button class="nav__link" type="button" *ngFor="let link of links" (click)="goTo(link.id)">
+      {{ link.label }}
+    </button>
+    <a class="btn nav__cta" href="#contact" (click)="goTo('contact')">Contactar</a>
+  </nav>
+
+  <button class="nav__toggle" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="Abrir menú">
+    <span></span><span></span>
+  </button>
+</header>

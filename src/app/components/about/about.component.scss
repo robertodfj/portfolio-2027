@@ -1,0 +1,54 @@
+:host { display: block; }
+
+.about {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6rem var(--section-pad-x);
+
+  &__lead {
+    max-width: 34ch;
+    font-size: 1.05rem;
+    color: var(--ink);
+    margin: 1.25rem 0 3rem;
+  }
+
+  &__traits {
+    list-style: none;
+    margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--line);
+    max-width: 46rem;
+    border: 1px solid var(--line);
+  }
+
+  &__trait {
+    background: rgba(8, 8, 10, 0.55);
+    backdrop-filter: blur(6px);
+    padding: 1.4rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 8rem;
+  }
+
+  &__trait-label {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+  }
+
+  &__trait-detail {
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    line-height: 1.4;
+  }
+}
+
+@media (max-width: 700px) {
+  .about__traits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -1,0 +1,21 @@
+<section id="projects" class="projects">
+  <p class="eyebrow" data-reveal-project>proyectos/</p>
+  <h2 class="section-title" data-reveal-project>Cosas que he construido</h2>
+
+  <div class="projects__list">
+    <article class="project" data-reveal-project *ngFor="let p of projects">
+      <span class="project__index">{{ p.index }}</span>
+      <div class="project__body">
+        <h3 class="project__title">{{ p.title }}</h3>
+        <p class="project__desc">{{ p.description }}</p>
+        <ul class="project__stack">
+          <li *ngFor="let s of p.stack">{{ s }}</li>
+        </ul>
+        <div class="project__links">
+          <a class="btn" [href]="p.githubUrl" target="_blank" rel="noopener">GitHub ↗</a>
+          <a class="btn btn--solid" *ngIf="p.demoUrl" [href]="p.demoUrl">Ver demo</a>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>

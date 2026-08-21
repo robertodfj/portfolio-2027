@@ -1,0 +1,28 @@
+<canvas #sceneCanvas class="scene-canvas" aria-hidden="true"></canvas>
+
+<app-loading-screen *ngIf="loading()"></app-loading-screen>
+
+<app-navbar />
+
+<main id="main-content">
+  <app-hero />
+  <app-about />
+  <app-experience />
+  <app-technologies />
+  <app-projects />
+  <app-contact />
+</main>
+
+<button
+  class="scroll-top"
+  type="button"
+  aria-label="Volver arriba"
+  [class.scroll-top--visible]="showScrollTop()"
+  (click)="scrollToTop()"
+>
+  ↑
+</button>
+
+<span class="visually-hidden" *ngIf="usingPlaceholder()">
+  Modelo 3D placeholder activo — sustituye src/assets/models/roberto.glb por el modelo definitivo.
+</span>

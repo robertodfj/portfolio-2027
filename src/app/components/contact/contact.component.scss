@@ -1,0 +1,44 @@
+:host { display: block; }
+
+.contact {
+  min-height: 100vh;
+  padding: 8rem var(--section-pad-x) 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  &__title {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 6vw, 4.5rem);
+    margin-bottom: 1.5rem;
+  }
+
+  &__lead { max-width: 34ch; margin-bottom: 2.5rem; font-size: 1.05rem; }
+
+  &__cta { width: fit-content; font-size: 1rem; padding: 1em 2em; margin-bottom: 3rem; }
+
+  &__links {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.5rem;
+
+    a { transition: color 0.25s; }
+    a:hover { color: var(--accent); }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+  }
+}

@@ -1,0 +1,125 @@
+/* ==========================================================================
+   DESIGN TOKENS
+   Palette: near-black stage + off-white ink + one controlled electric-indigo
+   accent (#6E7BFF) and a single warm ember accent (#FF8A3D) reserved for
+   the technologies-hover moment only. Grayscale carries almost everything.
+   Type: Space Grotesk (display) / Inter (body) / JetBrains Mono (labels,
+   code-like eyebrows, coordinates) — the mono face is the signature: every
+   section label reads like a code comment, not a numbered badge.
+   ========================================================================== */
+:root {
+  --ink: #f2f2f0;
+  --ink-dim: #a3a3a8;
+  --ink-faint: #6b6b70;
+  --stage: #08080a;
+  --stage-raised: #101014;
+  --line: #232328;
+  --accent: #6e7bff;
+  --accent-dim: #6e7bff33;
+  --ember: #ff8a3d;
+
+  --font-display: 'Space Grotesk', 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --section-pad-x: clamp(1.5rem, 6vw, 6rem);
+  --easing: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--stage);
+  color: var(--ink);
+  font-family: var(--font-body);
+  scroll-behavior: auto;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100%;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.05;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 0; color: var(--ink-dim); line-height: 1.6; }
+
+a { color: inherit; text-decoration: none; }
+
+::selection { background: var(--accent); color: #050506; }
+
+/* Reduced motion: respect it everywhere */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Shared "code comment" eyebrow label used by every section instead of
+   numbered 01/02/03 badges — it names the section the way a dev names a
+   block of code, which is the actual signature of this design. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 1rem;
+
+  &::before { content: '//'; color: var(--ink-faint); }
+}
+
+.section-title {
+  font-size: clamp(2rem, 5vw, 3.75rem);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  padding: 0.9em 1.6em;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.3s var(--easing), color 0.3s var(--easing), background 0.3s var(--easing);
+
+  &:hover { border-color: var(--accent); color: var(--accent); }
+  &.btn--solid {
+    background: var(--ink);
+    color: var(--stage);
+    border-color: var(--ink);
+    &:hover { background: var(--accent); border-color: var(--accent); color: #050506; }
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}

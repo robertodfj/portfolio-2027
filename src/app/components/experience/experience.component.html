@@ -1,0 +1,15 @@
+<section id="experience" class="experience">
+  <p class="eyebrow" data-reveal>experiencia.log</p>
+  <h2 class="section-title" data-reveal>En qué he estado trabajando</h2>
+
+  <div class="experience__grid">
+    <article class="experience__card" data-reveal *ngFor="let item of items">
+      <span class="experience__focus">{{ item.focus }}</span>
+      <h3 class="experience__role">{{ item.role }}</h3>
+      <p class="experience__desc">{{ item.description }}</p>
+      <ul class="experience__stack">
+        <li *ngFor="let s of item.stack">{{ s }}</li>
+      </ul>
+    </article>
+  </div>
+</section>

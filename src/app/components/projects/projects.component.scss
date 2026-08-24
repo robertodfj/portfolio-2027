@@ -132,8 +132,7 @@
       translateY(-50%);
 
     border:
-      1px solid
-      rgba(255, 255, 255, 0.12);
+      1px solid rgba(255, 255, 255, 0.12);
 
     background:
       rgba(8, 8, 12, 0.55);
@@ -148,19 +147,15 @@
       blur(8px);
 
     box-shadow:
-      0 10px 30px
-      rgba(0, 0, 0, 0.3);
+      0 10px 30px rgba(0, 0, 0, 0.3);
 
     cursor: pointer;
 
     transition:
-      transform 0.45s
-        cubic-bezier(
-          0.22,
-          1,
-          0.36,
-          1
-        ),
+      transform 0.45s cubic-bezier(0.22,
+        1,
+        0.36,
+        1),
 
       background 0.4s ease,
 
@@ -171,13 +166,10 @@
       font-size: 1rem;
 
       transition:
-        transform 0.4s
-          cubic-bezier(
-            0.22,
-            1,
-            0.36,
-            1
-          );
+        transform 0.4s cubic-bezier(0.22,
+          1,
+          0.36,
+          1);
     }
 
 
@@ -189,8 +181,7 @@
         rgba(110, 123, 255, 0.35);
 
       transform:
-        translateY(-50%)
-        scale(1.06);
+        translateY(-50%) scale(1.06);
     }
 
 
@@ -225,12 +216,9 @@
   position: relative;
 
   flex:
-    0 0
-    clamp(
-      310px,
+    0 0 clamp(310px,
       27vw,
-      390px
-    );
+      390px);
 
   min-height: 430px;
 
@@ -257,23 +245,17 @@
    * oscura integrada con el fondo.
    */
   background:
-    rgba(14, 14, 18, 0.52);
+    rgba(14, 14, 18, 0.82);
 
   border:
-    1px solid
-    rgba(255, 255, 255, 0.08);
+    1px solid rgba(255, 255, 255, 0.2);
 
   box-shadow:
-    0 20px 50px
-    rgba(0, 0, 0, 0.2);
+    0 20px 50px rgba(0, 0, 0, 0.2);
 
 
   transform:
-    translateY(var(--lift, 0))
-    scale(var(--scale, 0.96))
-    perspective(1000px)
-    rotateX(var(--rx, 0deg))
-    rotateY(var(--ry, 0deg));
+    translateY(var(--lift, 0)) scale(var(--scale, 0.96)) perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
 
 
   opacity:
@@ -281,31 +263,22 @@
 
 
   transition:
-    transform 0.75s
-      cubic-bezier(
-        0.22,
-        1,
-        0.36,
-        1
-      ),
+    transform 0.75s cubic-bezier(0.22,
+      1,
+      0.36,
+      1),
 
-    opacity 0.75s
-      cubic-bezier(
-        0.22,
-        1,
-        0.36,
-        1
-      ),
+    opacity 0.75s cubic-bezier(0.22,
+      1,
+      0.36,
+      1),
 
     border-color 0.5s ease,
 
-    box-shadow 0.75s
-      cubic-bezier(
-        0.22,
-        1,
-        0.36,
-        1
-      );
+    box-shadow 0.75s cubic-bezier(0.22,
+      1,
+      0.36,
+      1);
 
 
   will-change:
@@ -325,11 +298,9 @@
       rgba(255, 255, 255, 0.14);
 
     box-shadow:
-      0 30px 70px
-      rgba(0, 0, 0, 0.28),
+      0 30px 70px rgba(0, 0, 0, 0.28),
 
-      0 0 40px
-      rgba(100, 110, 255, 0.06);
+      0 0 40px rgba(100, 110, 255, 0.06);
   }
 
 
@@ -344,8 +315,7 @@
       rgba(255, 255, 255, 0.18);
 
     box-shadow:
-      0 35px 75px
-      rgba(0, 0, 0, 0.3);
+      0 35px 75px rgba(0, 0, 0, 0.3);
   }
 
 
@@ -361,13 +331,9 @@
     pointer-events: none;
 
     background:
-      radial-gradient(
-        280px circle
-        at var(--mx, 50%)
-        var(--my, 50%),
+      radial-gradient(280px circle at var(--mx, 50%) var(--my, 50%),
         rgba(255, 255, 255, 0.07),
-        transparent 65%
-      );
+        transparent 65%);
 
     opacity: 0;
 
@@ -376,8 +342,7 @@
   }
 
 
-  &:hover
-  &__sheen {
+  &:hover &__sheen {
     opacity: 1;
   }
 
@@ -396,7 +361,7 @@
       0.72rem;
 
     color:
-      var(--ink-faint);
+      white;
 
     opacity:
       0.7;
@@ -457,22 +422,17 @@
       rgba(255, 255, 255, 0.035);
 
     border:
-      1px solid
-      rgba(255, 255, 255, 0.07);
+      1px solid rgba(255, 255, 255, 0.07);
 
     transition:
-      transform 0.5s
-        cubic-bezier(
-          0.22,
-          1,
-          0.36,
-          1
-        );
+      transform 0.5s cubic-bezier(0.22,
+        1,
+        0.36,
+        1);
   }
 
 
-  &:hover
-  &__icon {
+  &:hover &__icon {
     transform:
       translateY(-2px);
   }
@@ -536,8 +496,7 @@
         rgba(110, 123, 255, 0.035);
 
       border:
-        1px solid
-        rgba(110, 123, 255, 0.2);
+        1px solid rgba(110, 123, 255, 0.2);
 
       border-radius:
         999px;
@@ -550,9 +509,7 @@
   }
 
 
-  &:hover
-  &__stack
-  li {
+  &:hover &__stack li {
     border-color:
       rgba(110, 123, 255, 0.32);
 
@@ -610,26 +567,20 @@
   border-radius: 50%;
 
   background:
-    rgba(255, 255, 255, 0.18);
+    rgba(255, 255, 255, 1);
 
   cursor: pointer;
 
   transition:
-    width 0.5s
-      cubic-bezier(
-        0.22,
-        1,
-        0.36,
-        1
-      ),
+    width 0.5s cubic-bezier(0.22,
+      1,
+      0.36,
+      1),
 
-    height 0.5s
-      cubic-bezier(
-        0.22,
-        1,
-        0.36,
-        1
-      ),
+    height 0.5s cubic-bezier(0.22,
+      1,
+      0.36,
+      1),
 
     background 0.4s ease,
 
@@ -644,8 +595,7 @@
       var(--accent);
 
     box-shadow:
-      0 0 12px
-      rgba(110, 123, 255, 0.5);
+      0 0 12px rgba(110, 123, 255, 0.5);
   }
 }
 
@@ -679,13 +629,12 @@
     0.5;
 
   animation:
-    projectHint 3s
-    ease-in-out
-    infinite;
+    projectHint 3s ease-in-out infinite;
 }
 
 
 @keyframes projectHint {
+
   0%,
   100% {
     opacity: 0.35;

@@ -16,10 +16,10 @@ interface Trait {
 })
 export class AboutComponent implements AfterViewInit {
   readonly traits: Trait[] = [
-    { label: 'CODE', detail: 'Backend Java, APIs REST, integraciones' },
-    { label: 'BUILD', detail: 'Proyectos propios de principio a fin' },
-    { label: 'LEARN', detail: 'Nuevo stack cada vez que hace falta' },
-    { label: 'RIDE', detail: 'La moto es el otro modo de despejarme' },
+    { label: 'CODE', detail: 'Más que un trabajo un hobby' },
+    { label: 'GYM', detail: 'Estar agusto físicamente' },
+    { label: 'LEARN', detail: 'Constantemente formándome' },
+    { label: 'RIDE', detail: 'Mi mayor pasión' },
   ];
 
   constructor(private el: ElementRef<HTMLElement>) {}

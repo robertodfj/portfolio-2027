@@ -30,13 +30,13 @@ interface Keyframe {
  */
 const KEYFRAMES: Keyframe[] = [
   { progress: 0.0, characterPos: new THREE.Vector3(0, 0, 0.4), characterRotY: 0, cameraPos: new THREE.Vector3(0, 1.35, 5.2), lookAt: new THREE.Vector3(0, 1.0, 0.4), state: 'Idle' },
-  { progress: 0.12, characterPos: new THREE.Vector3(0, 0, 0.1), characterRotY: -0.15, cameraPos: new THREE.Vector3(0.6, 1.3, 4.6), lookAt: new THREE.Vector3(0, 1.0, 0.1), state: 'Idle' },
+  { progress: 0.10, characterPos: new THREE.Vector3(0, 0, 0.1), characterRotY: -0.15, cameraPos: new THREE.Vector3(0.6, 1.3, 4.6), lookAt: new THREE.Vector3(0, 1.0, 0.1), state: 'Idle' },
   { progress: 0.25, characterPos: new THREE.Vector3(-0.6, 0, -0.6), characterRotY: -0.35, cameraPos: new THREE.Vector3(0.9, 1.35, 4.0), lookAt: new THREE.Vector3(-0.4, 1.0, -0.4), state: 'Walking' },
   { progress: 0.4, characterPos: new THREE.Vector3(0.55, 0, -0.55), characterRotY: 1.9, cameraPos: new THREE.Vector3(1.5, 1.35, 3.0), lookAt: new THREE.Vector3(0.75, 1.0, -0.6), state: 'Walking' },
   { progress: 0.55, characterPos: new THREE.Vector3(0.55, 0, -0.6), characterRotY: 2.0, cameraPos: new THREE.Vector3(1.7, 1.5, 2.2), lookAt: new THREE.Vector3(0.85, 1.0, -0.75), state: 'Typing' },
   { progress: 0.7, characterPos: new THREE.Vector3(-0.3, 0, -0.3), characterRotY: -1.4, cameraPos: new THREE.Vector3(0.3, 1.15, 2.0), lookAt: new THREE.Vector3(-0.1, 0.8, -0.3), state: 'Motorcycle' },
   { progress: 0.85, characterPos: new THREE.Vector3(0, 0, 0.2), characterRotY: 0.25, cameraPos: new THREE.Vector3(-0.9, 1.3, 3.3), lookAt: new THREE.Vector3(0, 1.0, 0.2), state: 'Standing' },
-  { progress: 1.0, characterPos: new THREE.Vector3(0, 0, 0.6), characterRotY: 0, cameraPos: new THREE.Vector3(0, 1.35, 3.4), lookAt: new THREE.Vector3(0, 1.05, 0.6), state: 'Looking' },
+  { progress: 1.0, characterPos: new THREE.Vector3(0, -0.3, 0.2), characterRotY: 0, cameraPos: new THREE.Vector3(0, 1.35, 3.4), lookAt: new THREE.Vector3(0, 1.05, 0.6), state: 'Looking' },
 ];
 
 @Injectable({ providedIn: 'root' })

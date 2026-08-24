@@ -47,21 +47,42 @@ export class ModelLoaderService {
   }
 
   /**
-   * Loads /assets/models/roberto.glb. If the file is missing or fails to
-   * parse, resolves with a procedural placeholder instead of rejecting —
-   * the site must never break just because the final model isn't in yet.
+   * Loads /assets/models/roberto.glb. If the file is missing, fails to
+   * parse, OR takes too long (e.g. the Draco CDN decoder stalls), resolves
+   * with a procedural placeholder instead of hanging forever — the site
+   * must never end up stuck just because the model didn't come through.
    */
   async loadCharacter(path = 'assets/models/roberto.glb'): Promise<CharacterController> {
+    console.info(`[ModelLoaderService] Cargando "${path}"…`);
     try {
-      const gltf = await this.loader.loadAsync(path);
+      const gltf = await this.withTimeout(this.loader.loadAsync(path), 15000);
+      console.info(
+        `[ModelLoaderService] GLB cargado. Animaciones detectadas: ${gltf.animations.map((a) => a.name).join(', ') || '(ninguna)'}`,
+      );
       return new GltfCharacter(gltf);
-    } catch {
+    } catch (err) {
       console.warn(
-        `[ModelLoaderService] No se pudo cargar "${path}". Usando personaje placeholder. ` +
-          'Sustituye el archivo por tu modelo definitivo para activar el GLB real.',
+        `[ModelLoaderService] No se pudo cargar "${path}" (o tardó demasiado). Usando personaje placeholder.`,
+        err,
       );
       return new PlaceholderCharacter();
     }
+  }
+
+  private withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`Timeout tras ${ms}ms (¿decodificador Draco colgado?)`)), ms);
+      promise.then(
+        (v) => {
+          clearTimeout(timer);
+          resolve(v);
+        },
+        (e) => {
+          clearTimeout(timer);
+          reject(e);
+        },
+      );
+    });
   }
 }
 
@@ -74,15 +95,56 @@ class GltfCharacter implements CharacterController {
   private currentAction: THREE.AnimationAction | null = null;
 
   constructor(gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] }) {
-    this.root = gltf.scene;
-    this.root.traverse((obj) => {
+    // `root` is an empty wrapper that AnimationService moves every frame
+    // (scroll-driven position/rotation). The actual imported scene lives
+    // one level inside it, so we can bake a one-time scale/offset fix onto
+    // it without that correction being overwritten each frame.
+    this.root = new THREE.Group();
+    const inner = gltf.scene;
+    this.root.add(inner);
+
+    inner.traverse((obj: THREE.Object3D) => {
       if ((obj as THREE.Mesh).isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
       }
     });
+
+    this.normalize(inner);
+
     this.mixer = new THREE.AnimationMixer(this.root);
     this.mapClips(gltf.animations);
+  }
+
+  /**
+   * Different tools (Mixamo, Meshy, Hi3D, a manual Blender export...) each
+   * export at their own scale and pivot. Rather than relying on every
+   * future model being authored at exactly human scale with feet at
+   * y = 0, measure it once from its bind-pose bounding box and correct it
+   * so it always lands where the camera keyframes in AnimationService
+   * expect: ~1.75 units tall, centered on X/Z, feet at y = 0.
+   */
+  private normalize(inner: THREE.Object3D): void {
+    const targetHeight = 2;
+    let box = new THREE.Box3().setFromObject(inner);
+    const size = box.getSize(new THREE.Vector3());
+
+    if (size.y > 0.0001) {
+      // Always fit to targetHeight — no dead zone. A "close enough, skip
+      // it" tolerance sounds safe but silently leaves badly-scaled imports
+      // (a common outcome of photogrammetry → auto-rig pipelines) uncorrected.
+      const scale = targetHeight / size.y;
+      inner.scale.setScalar(scale);
+      box = new THREE.Box3().setFromObject(inner);
+    }
+
+    const center = box.getCenter(new THREE.Vector3());
+    inner.position.x -= center.x;
+    inner.position.z -= center.z;
+    inner.position.y -= box.min.y + 1;
+    console.info(
+      `[ModelLoaderService] Modelo normalizado — altura original: ${size.y.toFixed(2)}u, escala aplicada: ${inner.scale.x.toFixed(3)}x.`,
+    );
   }
 
   private mapClips(clips: THREE.AnimationClip[]): void {
@@ -171,7 +233,7 @@ class PlaceholderCharacter implements CharacterController {
     this.legR.position.set(0.14, 0.62, 0);
 
     this.root.add(this.torso, this.head, visor, this.armL, this.armR, this.legL, this.legR);
-    this.root.traverse((o) => (o.castShadow = true));
+    this.root.traverse((o: THREE.Object3D) => (o.castShadow = true));
   }
 
   private buildLimb(radius: number, length: number, mat: THREE.Material, tipMat: THREE.Material): THREE.Group {
@@ -244,11 +306,11 @@ class PlaceholderCharacter implements CharacterController {
   }
 
   dispose(): void {
-    this.root.traverse((obj) => {
+    this.root.traverse((obj: THREE.Object3D) => {
       const mesh = obj as THREE.Mesh;
       if (mesh.isMesh) {
         mesh.geometry.dispose();
-        (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach((m) => m.dispose());
+        (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach((m: THREE.Material) => m.dispose());
       }
     });
   }

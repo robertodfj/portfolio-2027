@@ -2,14 +2,23 @@
   <p class="eyebrow" data-reveal>experiencia.log</p>
   <h2 class="section-title" data-reveal>En qué he estado trabajando</h2>
 
-  <div class="experience__grid">
-    <article class="experience__card" data-reveal *ngFor="let item of items">
-      <span class="experience__focus">{{ item.focus }}</span>
-      <h3 class="experience__role">{{ item.role }}</h3>
-      <p class="experience__desc">{{ item.description }}</p>
-      <ul class="experience__stack">
+  <ol class="timeline">
+    <li class="timeline__entry" data-reveal *ngFor="let item of items">
+      <span class="timeline__node" aria-hidden="true"></span>
+
+      <span class="timeline__period">{{ item.period }}</span>
+
+      <h3 class="timeline__role">
+        {{ item.role }} <span class="timeline__company">· {{ item.company }}</span>
+      </h3>
+
+      <ul class="timeline__bullets">
+        <li *ngFor="let b of item.bullets">{{ b }}</li>
+      </ul>
+
+      <ul class="timeline__stack">
         <li *ngFor="let s of item.stack">{{ s }}</li>
       </ul>
-    </article>
-  </div>
+    </li>
+  </ol>
 </section>

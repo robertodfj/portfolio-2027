@@ -8,9 +8,9 @@ import { revealOnScroll } from '../../shared/reveal.util';
   styleUrl: './contact.component.scss',
 })
 export class ContactComponent implements AfterViewInit {
-  readonly email = 'roberto.defrutos.dev@gmail.com';
-  readonly githubUrl = 'https://github.com/roberto-dev';
-  readonly linkedinUrl = 'https://linkedin.com/in/roberto-de-frutos';
+  readonly email = 'robertodfj93@gmail.com';
+  readonly githubUrl = 'https://github.com/robertodfj';
+  readonly linkedinUrl = 'https://linkedin.com/in/robertodfj';
 
   constructor(private el: ElementRef<HTMLElement>) {}
 

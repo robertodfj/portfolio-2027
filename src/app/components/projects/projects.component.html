@@ -1,21 +1,65 @@
 <section id="projects" class="projects">
-  <p class="eyebrow" data-reveal-project>proyectos/</p>
-  <h2 class="section-title" data-reveal-project>Cosas que he construido</h2>
+  <header class="projects__header" data-reveal-project>
+    <p class="eyebrow">proyectos/</p>
+    <h2 class="section-title">Cosas que he construido</h2>
+  </header>
 
-  <div class="projects__list">
-    <article class="project" data-reveal-project *ngFor="let p of projects">
-      <span class="project__index">{{ p.index }}</span>
-      <div class="project__body">
-        <h3 class="project__title">{{ p.title }}</h3>
-        <p class="project__desc">{{ p.description }}</p>
-        <ul class="project__stack">
+  <div class="projects__carousel" data-reveal-project>
+    <button
+      class="projects__arrow projects__arrow--prev"
+      type="button"
+      (click)="prev()"
+      [disabled]="activeIndex() === 0"
+      aria-label="Proyecto anterior"
+    >‹</button>
+
+    <div class="projects__track" #track (scroll)="onTrackScroll()">
+      <article
+        class="glass-card"
+        *ngFor="let p of projects; let i = index"
+        (mousemove)="onTilt($event)"
+        (mouseleave)="resetTilt($event)"
+        [class.glass-card--active]="activeIndex() === i"
+      >
+        <span class="glass-card__sheen" aria-hidden="true"></span>
+
+        <span class="glass-card__index">{{ p.index }}</span>
+
+        <h3 class="glass-card__title">
+          <span class="glass-card__icon" *ngIf="p.icon" aria-hidden="true">{{ p.icon }}</span>
+          {{ p.title }}
+        </h3>
+
+        <p class="glass-card__desc">{{ p.description }}</p>
+
+        <ul class="glass-card__stack">
           <li *ngFor="let s of p.stack">{{ s }}</li>
         </ul>
-        <div class="project__links">
-          <a class="btn" [href]="p.githubUrl" target="_blank" rel="noopener">GitHub ↗</a>
-          <a class="btn btn--solid" *ngIf="p.demoUrl" [href]="p.demoUrl">Ver demo</a>
+
+        <div class="glass-card__links" *ngIf="p.githubUrl || p.demoUrl">
+          <a class="btn" *ngIf="p.githubUrl" [href]="p.githubUrl" target="_blank" rel="noopener">GitHub ↗</a>
+          <a class="btn btn--solid" *ngIf="p.demoUrl" [href]="p.demoUrl" target="_blank" rel="noopener">Ver demo</a>
         </div>
-      </div>
-    </article>
+      </article>
+    </div>
+
+    <button
+      class="projects__arrow projects__arrow--next"
+      type="button"
+      (click)="next()"
+      [disabled]="activeIndex() === projects.length - 1"
+      aria-label="Siguiente proyecto"
+    >›</button>
+  </div>
+
+  <div class="projects__dots" data-reveal-project>
+    <button
+      type="button"
+      *ngFor="let p of projects; let i = index"
+      class="projects__dot"
+      [class.projects__dot--active]="activeIndex() === i"
+      (click)="scrollToIndex(i)"
+      [attr.aria-label]="'Ir a ' + p.title"
+    ></button>
   </div>
 </section>

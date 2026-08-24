@@ -1,0 +1,37 @@
+@"
+# Dependencies
+/node_modules
+
+# Angular / build output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+.angular/cache
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.iml
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log
+yarn-error.log
+*.log
+
+# Environment / secrets
+.env
+.env.*
+src/environments/environment.*.ts
+
+# Misc
+*.tsbuildinfo
+"@ | Out-File -Encoding utf8 .gitignore

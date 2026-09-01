@@ -72,10 +72,23 @@ export class ThreeSceneService implements OnDestroy {
     key.position.set(3.5, 5, 4);
     key.castShadow = !this.isMobile;
     if (key.castShadow) {
-      key.shadow.mapSize.set(1024, 1024);
+      key.shadow.mapSize.set(2048, 2048);
+      // Frustum tightened around the character (rather than the default
+      // ±5 units) so the fixed shadow-map resolution lands more texels per
+      // surface unit — a loose frustum was the main cause of the banding
+      // "stripes" visible on curved skinned geometry in-browser (viewers
+      // that don't do real-time self-shadowing never showed the artifact).
+      key.shadow.camera.left = -3;
+      key.shadow.camera.right = 3;
+      key.shadow.camera.top = 3;
+      key.shadow.camera.bottom = -3;
       key.shadow.camera.near = 1;
-      key.shadow.camera.far = 20;
-      key.shadow.bias = -0.0025;
+      key.shadow.camera.far = 12;
+      // normalBias (offsets the shadow lookup along the surface normal)
+      // fixes acne on curved/skinned meshes far more reliably than depth
+      // bias alone, which is what was producing the moiré-like stripes.
+      key.shadow.bias = -0.0001;
+      key.shadow.normalBias = 0.04;
     }
     this.scene.add(key);
 

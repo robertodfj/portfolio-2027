@@ -170,10 +170,26 @@ export const MOTORBIKE = {
   /**
    * Dimensión mayor en unidades de mundo. El GLB trae su propia escala de
    * export, así que se normaliza igual que el personaje en vez de confiar en
-   * ella. El personaje mide 2, así que 2.8 la deja claramente por encima de
+   * ella. El personaje mide 2, así que 2.66 la deja claramente por encima de
    * él — que es la intención: en su sección la moto manda.
+   *
+   * AQUÍ es donde se controla el tamaño de la moto (a petición explícita,
+   * bajado un 5% desde 2.8). Todo lo que cuelga de RIDER (SEAT, GRIP_L/R,
+   * PEG_L/R) está medido en ESTE mismo sistema de coordenadas — son
+   * distancias en el espacio ya normalizado por este valor, no posiciones
+   * fijas en el mundo. Si este número vuelve a tocarse, esas cuatro
+   * constantes tienen que reescalarse en la misma proporción (multiplicar
+   * cada componente por el mismo factor), o dejan de apuntar a los puntos
+   * reales del manillar/asiento/estriberas. Además de encoger la silueta de
+   * la moto, esto relaja notablemente el brazo del jinete: al escalar TODO
+   * el sistema de coordenadas de la moto (asiento, manillar Y las
+   * proporciones entre ellos) mientras el personaje se mantiene a su tamaño
+   * real, el hueco que el brazo tiene que cubrir se hace proporcionalmente
+   * más pequeño frente a un brazo que no cambia de longitud — verificado
+   * contra el esqueleto real: el codo pasa de 171° (a un paso de bloquearse)
+   * a 140° (bastante más relajado), con mano y pie exactos en los dos casos.
    */
-  TARGET_HEIGHT: 2.8,
+  TARGET_HEIGHT: 2.35,
 
   /** Giro continuo sobre su eje Y, en radianes por segundo. */
   SPIN_SPEED: 0.45,
@@ -315,11 +331,16 @@ export const RIDER = {
    */
 
   /** Punto de la cadera (Hips) sobre el asiento. */
-  SEAT: new THREE.Vector3(-0.38, 0.46, 0),
+  SEAT: new THREE.Vector3(-0.361, 0.437, 0),
 
-  /** Puños del manillar. L = lado izquierdo del personaje, R = derecho. */
-  GRIP_L: new THREE.Vector3(0.331, 0.217, -0.179),
-  GRIP_R: new THREE.Vector3(0.331, 0.217, 0.179),
+  /**
+   * Puños del manillar. L = lado izquierdo del personaje, R = derecho.
+   * Reescalados ×0.95 junto con MOTORBIKE.TARGET_HEIGHT — siguen siendo la
+   * posición real de BONE_L_GRIP/BONE_R_GRIP, solo que ahora expresada en el
+   * sistema de coordenadas más pequeño que deja la moto al 95%.
+   */
+  GRIP_L: new THREE.Vector3(0.5145, 0.1062, -0.3501),
+  GRIP_R: new THREE.Vector3(0.5145, 0.1062, 0.3501),
 
   /**
    * Empuje adicional "hacia fuera" del codo (a lo largo de Z, alejándolo del
@@ -349,9 +370,10 @@ export const RIDER = {
    * lo que dobla más la rodilla (rodilla 94° -> 71°, más plegada/"metida"),
    * no la X ni la Z por sí solas: alejar la estribera de la cadera abre la
    * rodilla, acercarla la cierra. Pie exacto (error 0.0000), verificado.
+   * Reescaladas ×0.95 junto con MOTORBIKE.TARGET_HEIGHT (ver esa constante).
    */
-  PEG_L: new THREE.Vector3(-0.32, -0.05, -0.3),
-  PEG_R: new THREE.Vector3(-0.32, -0.05, 0.3),
+  PEG_L: new THREE.Vector3(-0.304, -0.0475, -0.240),
+  PEG_R: new THREE.Vector3(-0.304, -0.0475, 0.240),
 
   /**
    * El personaje mira hacia +Z en bind pose (ver WALK.IDLE_ROT_Y). La moto

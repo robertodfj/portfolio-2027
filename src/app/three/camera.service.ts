@@ -21,6 +21,8 @@ export class CameraService {
 
   /** Multiplicador de distancia cámara -> lookTarget. 1 = sin corrección. */
   private scale = 1;
+  /** Semiancho de mundo visible en el plano del personaje, con el aspecto actual. */
+  private halfWidth = 0;
 
   constructor() {
     this.camera.position.set(0, 1.3, 5.5);
@@ -30,6 +32,15 @@ export class CameraService {
 
   get distanceScale(): number {
     return this.scale;
+  }
+
+  /**
+   * Semiancho de mundo visible a la altura del personaje. Es lo que necesita
+   * el timeline para saber cuánto tiene que andar hasta salirse de verdad del
+   * cuadro, sea cual sea el aspecto de la ventana.
+   */
+  get visibleHalfWidth(): number {
+    return this.halfWidth;
   }
 
   update(): void {
@@ -46,6 +57,10 @@ export class CameraService {
     const baseDistance = CAMERA.POSITION.z - CAMERA.LOOK_AT.z;
     const needed = CAMERA.REQUIRED_HALF_WIDTH / (Math.tan(halfFovY) * this.camera.aspect);
     this.scale = THREE.MathUtils.clamp(needed / baseDistance, 1, CAMERA.MAX_DISTANCE_SCALE);
+
+    // El plano del personaje coincide con el punto al que mira la cámara
+    // (CAMERA.LOOK_AT.z == WALK.BASE_Z), así que la distancia es la misma.
+    this.halfWidth = Math.tan(halfFovY) * baseDistance * this.scale * this.camera.aspect;
   }
 
   private onResize = (): void => {

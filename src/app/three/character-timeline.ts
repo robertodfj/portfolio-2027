@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { CAMERA, WALK } from './narrative.config';
+import { CAMERA, MOTORBIKE, WALK } from './narrative.config';
+import { SectionRange } from './scroll-progress.service';
 
 /**
  * TIMELINE — todas las funciones PURAS de scrollProgress viven aquí.
@@ -16,12 +17,28 @@ import { CAMERA, WALK } from './narrative.config';
  * "de vuelta", es literalmente la misma función evaluada al revés.
  */
 
+/**
+ * Lo único que el timeline no puede saber por sí mismo: depende del layout
+ * real y del tamaño de la ventana. Se mide fuera y se inyecta, para que la
+ * función siga siendo pura y determinista dado un contexto.
+ */
+export interface TimelineContext {
+  /** Progreso al que "Más allá del código" pasa a ocupar la pantalla. */
+  aboutTop: number;
+  /** Semiancho de mundo visible en el plano del personaje. */
+  visibleHalfWidth: number;
+}
+
 export interface TimelineSample {
   progress: number;
   /** 0 = Idle puro, 1 = Walking puro. */
   walkBlend: number;
   /** Cabezal de lectura normalizado del clip Walking, [0,1). */
   walkPhase: number;
+  /** Progreso al que termina el tramo de caminata. Unidad de referencia del narrativo. */
+  walkEndProgress: number;
+  /** Progreso al que el personaje ha salido ENTERO del cuadro. */
+  exitProgress: number;
   position: THREE.Vector3;
   rotationY: number;
   cameraPosition: THREE.Vector3;
@@ -34,6 +51,8 @@ export function createTimelineSample(): TimelineSample {
     progress: 0,
     walkBlend: 0,
     walkPhase: 0,
+    walkEndProgress: 0,
+    exitProgress: 0,
     position: new THREE.Vector3(),
     rotationY: 0,
     cameraPosition: new THREE.Vector3(),
@@ -60,23 +79,45 @@ const wrap01 = (v: number): number => {
  * Evalúa el timeline completo para un `progress` dado y escribe el resultado
  * en `out`. Determinista y sin efectos secundarios.
  */
-export function evaluateTimeline(progress: number, out: TimelineSample): TimelineSample {
+export function evaluateTimeline(
+  progress: number,
+  ctx: TimelineContext,
+  out: TimelineSample,
+): TimelineSample {
   const p = clamp01(progress);
   out.progress = p;
+
+  // --- 0. Final del recorrido, derivado del layout y del encuadre ----------
+  // El personaje debe estar fuera antes de que se lea "Más allá del código".
+  const endProgress = ctx.aboutTop > 0 ? ctx.aboutTop * WALK.EXIT_LEAD : WALK.END_PROGRESS_FALLBACK;
+
+  // La cámara le sigue un FOLLOW del camino, así que para que la distancia
+  // RELATIVA supere el borde hay que dividir por (1 - FOLLOW).
+  const exitX = -(ctx.visibleHalfWidth + WALK.EXIT_MARGIN) / (1 - CAMERA.FOLLOW);
+
+  // Instante en que su borde derecho cruza el borde izquierdo del cuadro. La
+  // distancia RELATIVA a la cámara recorre (halfWidth + EXIT_MARGIN) en todo
+  // el tramo, y hace falta (halfWidth + su propio semiancho) para desaparecer.
+  const goneAt = (ctx.visibleHalfWidth + WALK.CHARACTER_HALF_WIDTH) /
+    (ctx.visibleHalfWidth + WALK.EXIT_MARGIN);
+  out.walkEndProgress = endProgress;
+  out.exitProgress = endProgress * Math.min(goneAt, 1);
 
   // --- 1. Recorrido normalizado de la fase 1 -------------------------------
   // Lineal a propósito: cualquier easing aquí rompería la relación 1:1 entre
   // "cuánto he hecho scroll" y "cuánto ha avanzado el personaje".
-  const travel = clamp01((p - WALK.START_PROGRESS) / (WALK.END_PROGRESS - WALK.START_PROGRESS));
+  const span = endProgress - WALK.START_PROGRESS;
+  const travel = span > 0 ? clamp01((p - WALK.START_PROGRESS) / span) : 0;
 
   // --- 2. Posición del personaje ------------------------------------------
-  const x = THREE.MathUtils.lerp(WALK.WALK_START_X, WALK.WALK_END_X, travel);
+  const x = THREE.MathUtils.lerp(WALK.WALK_START_X, exitX, travel);
   out.position.set(x, WALK.BASE_Y, WALK.BASE_Z);
 
   // --- 3. Mezcla Idle <-> Walking -----------------------------------------
-  // Sube al empezar a haber scroll real y baja al agotarse el recorrido.
+  // Sube al empezar a haber scroll real. BLEND_OUT a 0 significa que ya no
+  // vuelve a Idle: termina fuera de cuadro, caminando.
   const fadeIn = smoothstep(WALK.START_PROGRESS, WALK.START_PROGRESS + WALK.BLEND_IN, p);
-  const fadeOut = 1 - smoothstep(WALK.END_PROGRESS - WALK.BLEND_OUT, WALK.END_PROGRESS, p);
+  const fadeOut = WALK.BLEND_OUT > 0 ? 1 - smoothstep(endProgress - WALK.BLEND_OUT, endProgress, p) : 1;
   out.walkBlend = fadeIn * fadeOut;
 
   // --- 4. Fotograma del clip Walking --------------------------------------
@@ -101,23 +142,30 @@ export function evaluateTimeline(progress: number, out: TimelineSample): Timelin
 }
 
 /**
- * Presencia [0,1] de un elemento ligado a una sección del DOM: entra al
- * empezar su tramo, se mantiene, y sale al terminarlo. Igual de pura y de
- * reversible que el timeline del personaje — el mismo `progress` da siempre
- * el mismo valor, así que al subir se deshace exactamente igual.
+ * Presencia [0,1] de la moto, con los dos extremos anclados a cosas distintas
+ * a propósito:
  *
- * @param fade fracción del tramo dedicada a entrar y a salir.
+ *   ENTRADA -> al personaje. Arranca en cuanto termina de salir del cuadro,
+ *              así no queda hueco muerto entre que él se va y ella llega.
+ *   SALIDA  -> a la sección. Se va cuando "Más allá del código" se va.
+ *
+ * Igual de pura y reversible que el timeline del personaje: el mismo
+ * `progress` da siempre el mismo valor, así que al subir se deshace idéntico.
  */
-export function sectionPresence(
+export function motorbikePresence(
   progress: number,
-  range: { start: number; end: number },
-  fade: number,
+  sample: TimelineSample,
+  range: SectionRange,
 ): number {
-  const span = range.end - range.start;
-  if (span <= 0) return 0;
+  // Unidad de referencia: el tramo de caminata (≈85vh, anclado al layout).
+  const unit = sample.walkEndProgress;
+  const start = sample.exitProgress + unit * MOTORBIKE.ENTER_DELAY;
+  const rampIn = smoothstep(start, start + unit * MOTORBIKE.ENTER_FADE, progress);
 
-  const margin = span * clamp01(fade);
-  const rampIn = smoothstep(range.start, range.start + margin, progress);
-  const rampOut = 1 - smoothstep(range.end - margin, range.end, progress);
+  const span = range.leave - range.top;
+  if (span <= 0) return rampIn;
+
+  const exitAt = range.top + span * MOTORBIKE.EXIT_AT;
+  const rampOut = 1 - smoothstep(exitAt, exitAt + span * MOTORBIKE.EXIT_FADE, progress);
   return rampIn * rampOut;
 }

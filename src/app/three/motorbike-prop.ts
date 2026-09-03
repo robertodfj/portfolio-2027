@@ -35,7 +35,8 @@ export class MotorbikeProp {
       }
     });
 
-    this.root.position.copy(MOTORBIKE.POSITION);
+    // La X la fija setPlacement cada frame, en coordenadas de pantalla.
+    this.root.position.set(0, MOTORBIKE.WORLD_Y, MOTORBIKE.WORLD_Z);
     this.root.rotation.x = MOTORBIKE.TILT_X;
     this.root.rotation.z = MOTORBIKE.TILT_Z;
 
@@ -103,6 +104,18 @@ export class MotorbikeProp {
     this.presence = t;
     this.root.visible = t > 0.001;
     this.root.scale.setScalar(t);
+  }
+
+  /**
+   * Coloca la moto en SCREEN_X del encuadre actual — el hueco a la derecha del
+   * texto — y la mete hacia dentro si el cuadro no da para mostrarla entera
+   * (ventanas estrechas, donde la cámara ya no puede alejarse más).
+   */
+  setPlacement(cameraX: number, visibleHalfWidth: number): void {
+    const half = MOTORBIKE.TARGET_HEIGHT / 2;
+    const maxOffset = Math.max(0, visibleHalfWidth - half - MOTORBIKE.FRAME_PADDING);
+    const desired = MOTORBIKE.SCREEN_X * visibleHalfWidth;
+    this.root.position.x = cameraX + THREE.MathUtils.clamp(desired, -maxOffset, maxOffset);
   }
 
   /** Giro continuo. Solo corre mientras la moto está en escena. */

@@ -20,12 +20,20 @@ gsap.registerPlugin(ScrollTrigger);
  * scroll, y el snap por epsilon garantiza que al detenerse el scroll el
  * timeline se para en seco en el valor exacto.
  */
-/** Tramo que ocupa una sección del DOM, expresado en el MISMO scrollProgress global. */
+/**
+ * Anclajes de una sección del DOM, en el MISMO scrollProgress global.
+ *
+ * Hacen falta los tres porque con secciones de 100vh seguidas, `enter` cae en
+ * progress 0 y no sirve para nada: lo que marca "el usuario está viendo esta
+ * sección" es `top`.
+ */
 export interface SectionRange {
-  /** Progreso al que el borde superior de la sección entra por abajo. */
-  start: number;
-  /** Progreso al que su borde inferior sale por arriba. */
-  end: number;
+  /** Su borde superior asoma por abajo del viewport. */
+  enter: number;
+  /** Su borde superior alcanza el borde superior del viewport: pasa a ocupar la pantalla. */
+  top: number;
+  /** Su borde inferior sale por arriba: deja de verse. */
+  leave: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -75,7 +83,7 @@ export class ScrollProgressService implements OnDestroy {
    * ScrollTrigger (resize, load, cambios de layout).
    */
   trackSection(key: string, selector: string): void {
-    this.sections.set(key, { selector, range: { start: 0, end: 1 } });
+    this.sections.set(key, { selector, range: { enter: 0, top: 0, leave: 1 } });
     this.measureSections();
   }
 
@@ -99,8 +107,9 @@ export class ScrollProgressService implements OnDestroy {
 
       const rect = el.getBoundingClientRect();
       const top = rect.top + window.scrollY;
-      entry.range.start = clamp01((top - viewport) / scrollable);
-      entry.range.end = clamp01((top + rect.height) / scrollable);
+      entry.range.enter = clamp01((top - viewport) / scrollable);
+      entry.range.top = clamp01(top / scrollable);
+      entry.range.leave = clamp01((top + rect.height) / scrollable);
     }
   }
 

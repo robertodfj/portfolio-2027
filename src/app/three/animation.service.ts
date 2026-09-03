@@ -4,7 +4,13 @@ import { CameraService } from './camera.service';
 import { AnimationLayer, CharacterController, ModelLoaderService } from './model-loader.service';
 import { ScrollProgressService } from './scroll-progress.service';
 import { ThreeSceneService } from './three-scene.service';
-import { createTimelineSample, evaluateTimeline, sectionPresence, TimelineSample } from './character-timeline';
+import {
+  createTimelineSample,
+  evaluateTimeline,
+  motorbikePresence,
+  TimelineContext,
+  TimelineSample,
+} from './character-timeline';
 import { MotorbikeProp } from './motorbike-prop';
 import { buildParticleField } from './scene-props';
 import { AMBIENT, MOTORBIKE } from './narrative.config';
@@ -43,6 +49,8 @@ export class AnimationService {
   private readonly sample: TimelineSample = createTimelineSample();
   /** Vector de trabajo para el offset de cámara, también reutilizado. */
   private readonly camOffset = new THREE.Vector3();
+  /** Contexto medido (layout + encuadre) que el timeline necesita. Reutilizado. */
+  private readonly context: TimelineContext = { aboutTop: 0, visibleHalfWidth: 0 };
 
   /**
    * Array de capas estable: se muta in situ, nunca se recrea, y el
@@ -106,7 +114,8 @@ export class AnimationService {
     if (this.motorbike) {
       // Presencia <- scroll (reversible). Giro <- reloj (continuo).
       const range = this.scroll.sectionRange(ABOUT_SECTION);
-      this.motorbike.setPresence(range ? sectionPresence(progress, range, MOTORBIKE.FADE) : 0);
+      this.motorbike.setPresence(range ? motorbikePresence(progress, this.sample, range) : 0);
+      this.motorbike.setPlacement(this.cameraSvc.camera.position.x, this.cameraSvc.visibleHalfWidth);
       this.motorbike.update(elapsed);
     }
 
@@ -124,7 +133,12 @@ export class AnimationService {
 
   /** scrollProgress -> estado de la escena. Función determinista, sin memoria. */
   private apply(progress: number): void {
-    const s = evaluateTimeline(progress, this.sample);
+    // El contexto se refresca desde las medidas vivas: si cambia el layout o
+    // el tamaño de la ventana, el punto de salida se recalcula solo.
+    this.context.aboutTop = this.scroll.sectionRange(ABOUT_SECTION)?.top ?? 0;
+    this.context.visibleHalfWidth = this.cameraSvc.visibleHalfWidth;
+
+    const s = evaluateTimeline(progress, this.context, this.sample);
 
     if (this.character) {
       this.character.root.position.copy(s.position);

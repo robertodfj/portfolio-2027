@@ -31,14 +31,40 @@ export const SCROLL = {
  *  2. FASE 1 — IDLE -> CAMINAR HACIA LA IZQUIERDA
  *  ------------------------------------------------------------------ */
 export const WALK = {
-  /** Tramo de scroll que ocupa la fase 1. */
+  /** Inicio de la fase 1. */
   START_PROGRESS: 0.0,
-  END_PROGRESS: 0.30,
+
+  /**
+   * El final NO es un número fijo: se ancla a cuándo "Más allá del código"
+   * pasa a ocupar la pantalla, para que el personaje ya esté fuera de cuadro
+   * antes de que el usuario lea esa sección. 0.85 = completa su salida al 85%
+   * del camino hasta ese punto.
+   *
+   * Se ancla y no se hardcodea porque hero y about miden 100vh cada uno: si
+   * mañana cambian de alto, un 0.30 fijo dejaría al personaje a medio salir.
+   */
+  EXIT_LEAD: 0.85,
+
+  /** Usado solo mientras la sección aún no se ha podido medir. */
+  END_PROGRESS_FALLBACK: 0.18,
 
   /** Posición X en START_PROGRESS. */
   WALK_START_X: 0,
-  /** Posición X en END_PROGRESS. Negativo = izquierda de la pantalla. */
-  WALK_END_X: -2.9,
+
+  /**
+   * Unidades de mundo MÁS ALLÁ del borde visible hasta las que camina. El
+   * destino exacto se calcula del semiancho real del encuadre (que depende
+   * del aspecto de la ventana), no de una X fija: una constante no puede
+   * garantizar "fuera de pantalla" en 21:9 y en 4:3 a la vez.
+   */
+  EXIT_MARGIN: 1.0,
+
+  /**
+   * Semiancho del personaje. Sirve para saber cuándo ha salido del cuadro
+   * ENTERO (y no solo su centro), que es el instante al que se engancha la
+   * aparición de la moto.
+   */
+  CHARACTER_HALF_WIDTH: 0.45,
 
   /** El personaje no cambia de plano en la fase 1. */
   BASE_Y: 0,
@@ -54,21 +80,22 @@ export const WALK = {
    * de 0.832 u con el modelo normalizado a 2 unidades de alto, y el ciclo son
    * dos pasos. A ese valor exacto el patinaje de pies es cero.
    *
-   * 1.50 baja deliberadamente un 10% por debajo para que la cadencia se vea
-   * más viva; ese 10% es todo el patinaje que hay. Súbelo a 1.664 si prefieres
-   * pisada perfecta. El grueso de la velocidad extra viene de WALK_END_X, que
-   * cubre más terreno por scroll sin introducir patinaje alguno.
+   * Se deja en el valor real: al salir de pantalla el personaje ya cubre
+   * mucho más terreno en mucho menos scroll, así que la cadencia sube sola
+   * ~2.6x respecto al ajuste anterior. Añadirle encima un recorte artificial
+   * solo metería patinaje sin hacerlo parecer más rápido. Bájalo si aun así
+   * quieres las piernas más nerviosas; cada 1% por debajo es 1% de patinaje.
    */
-  CYCLE_DISTANCE: 1.5,
+  CYCLE_DISTANCE: 1.664,
 
   /** Tramo de scroll (en unidades de progress) del fundido Idle -> Walking. */
   BLEND_IN: 0.015,
   /**
-   * Tramo del fundido Walking -> Idle al final del recorrido, para que la
-   * fase 1 termine de pie y no congelada a media zancada.
-   * Ponlo a 0 cuando exista la fase 2 y el caminar deba encadenar.
+   * 0 = no vuelve a Idle al final. Ahora el personaje termina FUERA de cuadro,
+   * así que pararlo de pie no se vería y solo restaría continuidad al volver
+   * a subir. La fase 2 decidirá con qué encadena cuando reaparezca.
    */
-  BLEND_OUT: 0.04,
+  BLEND_OUT: 0,
 
   /** Orientación en radianes. 0 = de frente a cámara; -PI/2 = mirando a -X. */
   IDLE_ROT_Y: 0,
@@ -89,20 +116,21 @@ export const CAMERA = {
   LOOK_AT: new THREE.Vector3(0, 1.0, 0.4),
   /**
    * Cuánto acompaña la cámara al personaje. 0 = fija, 1 = pegada.
-   * Subido de 0.25 a 0.32 al alargar WALK_END_X: con el recorrido nuevo,
-   * a 0.25 el personaje terminaba pegado al borde izquierdo del encuadre.
+   * Bajado a 0.12 ahora que el personaje debe SALIRSE: un seguimiento alto
+   * lo perseguiría y nunca llegaría a irse del cuadro. Queda lo justo para
+   * que la cámara respire durante la caminata.
    */
-  FOLLOW: 0.32,
+  FOLLOW: 0.12,
 
   /**
    * Semiancho de mundo que el encuadre debe cubrir SIEMPRE, medido desde el
-   * punto al que mira la cámara. Cubre al personaje al final de su recorrido
-   * (|WALK_END_X| * (1 - FOLLOW) ≈ 1.97, más su propio ancho) y a la moto en
-   * su posición. Si el aspecto de la ventana no da para tanto, la cámara se
-   * aleja lo justo: sin esto, en 4:3 o en móvil el personaje se sale del
-   * cuadro al terminar de caminar.
+   * punto al que mira la cámara. Ya no encuadra al personaje al final (ahora
+   * su trabajo es irse); lo que garantiza es que la MOTO quepa entera en su
+   * sección. Si el aspecto de la ventana no da para tanto, la cámara se aleja
+   * lo justo — y ese alejamiento alarga a su vez el recorrido de salida del
+   * personaje, que se calcula del semiancho real.
    */
-  REQUIRED_HALF_WIDTH: 2.7,
+  REQUIRED_HALF_WIDTH: 2.5,
 
   /**
    * Tope de alejamiento. En vertical extremo (9:16) cumplir el semiancho
@@ -125,14 +153,26 @@ export const MOTORBIKE = {
    */
   SECTION_SELECTOR: '#about',
 
-  /** Colocación en mundo. El personaje termina la fase 1 sobre x = WALK_END_X. */
-  POSITION: new THREE.Vector3(1.2, 0.75, -1.0),
+  /**
+   * Posición horizontal EN PANTALLA, normalizada: 0 = centro, 1 = borde
+   * derecho. Se ancla en pantalla y no en X de mundo porque el hueco a rellenar
+   * lo define la maqueta (el texto va topado a 34ch y la parrilla a 520px, así
+   * que el espacio libre arranca sobre el 42% del ancho). Un valor en unidades
+   * de mundo se descolocaría en cuanto cambiase el aspecto o la cámara se
+   * alejase; este cae siempre en el mismo sitio del encuadre.
+   */
+  SCREEN_X: 0.42,
+
+  /** Altura y profundidad sí en mundo: no dependen del ancho de la ventana. */
+  WORLD_Y: 0.9,
+  WORLD_Z: -1.0,
 
   /**
-   * Alto en unidades de mundo. El GLB trae su propia escala de export, así
-   * que se normaliza igual que el personaje en vez de confiar en ella.
+   * Dimensión mayor en unidades de mundo. El GLB trae su propia escala de
+   * export, así que se normaliza igual que el personaje en vez de confiar en
+   * ella. El personaje mide 2, así que 1.4 la deja a ~2/3 de su altura.
    */
-  TARGET_HEIGHT: 1.0,
+  TARGET_HEIGHT: 1.4,
 
   /** Giro continuo sobre su eje Y, en radianes por segundo. */
   SPIN_SPEED: 0.45,
@@ -141,11 +181,30 @@ export const MOTORBIKE = {
   TILT_X: 0.1,
   TILT_Z: -0.06,
 
-  /** Fracción del tramo de sección dedicada a entrar y a salir. */
-  FADE: 0.18,
+  /**
+   * La ENTRADA se ancla al instante exacto en que el personaje termina de
+   * salir del cuadro, no a la sección: así aparece justo al esconderse él,
+   * sin el hueco muerto que dejaba anclarla al tramo de "Más allá del código".
+   *
+   * Ambos valores van en fracciones del tramo de caminata (≈85vh de scroll),
+   * que es una unidad estable porque también está anclada al layout.
+   */
+  ENTER_DELAY: 0.02,
+  ENTER_FADE: 0.1,
+
+  /** La SALIDA sí se ancla a la sección: se va cuando la sección se va. */
+  EXIT_AT: 0.85,
+  EXIT_FADE: 0.15,
 
   /** Intensidad del env map propio (no se toca el resto de la escena). */
   ENV_INTENSITY: 0.9,
+
+  /**
+   * Holgura mínima entre la moto y el borde del cuadro. En ventanas estrechas
+   * la cámara no puede alejarse más (MAX_DISTANCE_SCALE), así que en vez de
+   * dejar que se recorte se la acerca al centro lo justo.
+   */
+  FRAME_PADDING: 0.1,
 
   /** 300k vértices: proyectar sombra duplicaría el coste de la pasada. */
   CAST_SHADOW: false,

@@ -50,11 +50,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const character = await this.modelLoader.loadCharacter();
     this.usingPlaceholder.set(character.usingPlaceholder);
 
-    this.sceneSvc.onUpdate((delta, elapsed) => {
-      character.update(delta, elapsed);
-      this.cameraSvc.update();
-    });
-
+    // Un único tick por frame: AnimationService lo registra y desde ahí
+    // orquesta scroll -> timeline -> personaje -> cámara, en ese orden.
     this.animationSvc.init(character, document.body);
     this.sceneSvc.startLoop(this.cameraSvc.camera);
 

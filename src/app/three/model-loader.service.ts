@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
-/** Every scene stage in the scroll narrative maps to one of these states. */
+/** Cada etapa del narrativo scroll mapea a uno de estos estados. */
 export type CharacterState =
   | 'Idle'
   | 'Walking'
@@ -13,14 +13,33 @@ export type CharacterState =
   | 'Motorcycle';
 
 /**
- * Common surface both the real GLB-driven character and the procedural
- * placeholder implement, so every consumer (AnimationService) is written
- * once and never has to know which one is active.
+ * Una capa de animación activa en un instante dado del timeline.
+ *
+ * `phase` es lo que convierte esto en un sistema scrubbed: cuando se indica,
+ * el clip NO avanza con el tiempo — su cabezal de lectura se coloca donde
+ * diga el timeline (y por tanto el scroll). Cuando se omite, el clip corre
+ * libre con el reloj real, que es lo que queremos para el idle en reposo.
+ */
+export interface AnimationLayer {
+  state: CharacterState;
+  /** Peso de mezcla [0,1]. La suma de las capas debería dar 1. */
+  weight: number;
+  /** Cabezal normalizado [0,1). Omitir => el clip corre con tiempo real. */
+  phase?: number;
+}
+
+/**
+ * Superficie común que implementan tanto el personaje real (GLB) como el
+ * placeholder procedural, para que AnimationService se escriba una sola vez
+ * y nunca tenga que saber cuál está activo.
  */
 export interface CharacterController {
   readonly root: THREE.Group;
   readonly usingPlaceholder: boolean;
-  play(state: CharacterState, opts?: { crossfade?: number; loop?: boolean }): void;
+  /** Estados para los que existe realmente un clip utilizable. */
+  readonly availableStates: ReadonlySet<CharacterState>;
+  /** Fija pesos y cabezales de todas las capas. Idempotente por frame. */
+  applyLayers(layers: readonly AnimationLayer[]): void;
   update(delta: number, elapsed: number): void;
   dispose(): void;
 }
@@ -34,23 +53,29 @@ const CLIP_ALIASES: Record<CharacterState, string[]> = {
   Motorcycle: ['motor', 'bike', 'ride'],
 };
 
+/**
+ * Clips cuyo desplazamiento horizontal debe anularse. La posición en X la
+ * decide el scroll; si el clip además trae root motion, ambos se pelean y el
+ * personaje se desincroniza del timeline.
+ */
+const IN_PLACE_STATES: readonly CharacterState[] = ['Walking'];
+
 @Injectable({ providedIn: 'root' })
 export class ModelLoaderService {
   private readonly loader = new GLTFLoader();
 
   constructor() {
-    // Optional Draco support for compressed export pipelines — safe no-op
-    // if the GLB isn't Draco-compressed.
+    // Soporte Draco opcional para pipelines comprimidos — no-op seguro si el
+    // GLB no está comprimido con Draco.
     const draco = new DRACOLoader();
     draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
     this.loader.setDRACOLoader(draco);
   }
 
   /**
-   * Loads /assets/models/roberto.glb. If the file is missing, fails to
-   * parse, OR takes too long (e.g. the Draco CDN decoder stalls), resolves
-   * with a procedural placeholder instead of hanging forever — the site
-   * must never end up stuck just because the model didn't come through.
+   * Carga /assets/models/roberto.glb. Si el fichero falta, no parsea, O tarda
+   * demasiado (p. ej. el decodificador Draco del CDN se atasca), resuelve con
+   * un placeholder procedural en vez de colgarse para siempre.
    */
   async loadCharacter(path = 'assets/models/roberto.glb'): Promise<CharacterController> {
     console.info(`[ModelLoaderService] Cargando "${path}"…`);
@@ -66,6 +91,20 @@ export class ModelLoaderService {
         err,
       );
       return new PlaceholderCharacter();
+    }
+  }
+
+  /**
+   * Carga un GLB de atrezo (sin animaciones ni rig). Devuelve null en vez de
+   * lanzar: un prop que no llega debe degradar la escena, nunca romperla.
+   */
+  async loadProp(path: string, timeoutMs = 20000): Promise<THREE.Group | null> {
+    try {
+      const gltf = await this.withTimeout(this.loader.loadAsync(path), timeoutMs);
+      return gltf.scene;
+    } catch (err) {
+      console.warn(`[ModelLoaderService] No se pudo cargar el prop "${path}".`, err);
+      return null;
     }
   }
 
@@ -86,19 +125,32 @@ export class ModelLoaderService {
   }
 }
 
-/** Real GLB path: wraps GLTF scene graph + AnimationMixer + clip lookup. */
+const wrap01 = (v: number): number => {
+  const m = v % 1;
+  return m < 0 ? m + 1 : m;
+};
+
+/**
+ * Camino real GLB: grafo de escena + AnimationMixer + búsqueda de clips.
+ *
+ * Las AnimationAction se crean UNA sola vez (perezosamente, cacheadas) y se
+ * dejan en `play()` de por vida. Por frame solo se tocan dos números por
+ * capa —`weight` y `time`—, nunca se recrean mixer ni acciones.
+ */
 class GltfCharacter implements CharacterController {
   readonly root: THREE.Group;
   readonly usingPlaceholder = false;
+
   private mixer: THREE.AnimationMixer;
   private clips = new Map<CharacterState, THREE.AnimationClip>();
-  private currentAction: THREE.AnimationAction | null = null;
+  private actions = new Map<CharacterState, THREE.AnimationAction>();
+  private states: ReadonlySet<CharacterState> = new Set();
 
   constructor(gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] }) {
-    // `root` is an empty wrapper that AnimationService moves every frame
-    // (scroll-driven position/rotation). The actual imported scene lives
-    // one level inside it, so we can bake a one-time scale/offset fix onto
-    // it without that correction being overwritten each frame.
+    // `root` es un envoltorio vacío que AnimationService mueve cada frame
+    // (posición/rotación derivadas del scroll). La escena importada vive un
+    // nivel dentro, para poder hornear en ella la corrección de escala/offset
+    // sin que esa corrección se sobrescriba en cada frame.
     this.root = new THREE.Group();
     const inner = gltf.scene;
     this.root.add(inner);
@@ -114,15 +166,19 @@ class GltfCharacter implements CharacterController {
 
     this.mixer = new THREE.AnimationMixer(this.root);
     this.mapClips(gltf.animations);
+    this.states = new Set(this.clips.keys());
+  }
+
+  get availableStates(): ReadonlySet<CharacterState> {
+    return this.states;
   }
 
   /**
-   * Different tools (Mixamo, Meshy, Hi3D, a manual Blender export...) each
-   * export at their own scale and pivot. Rather than relying on every
-   * future model being authored at exactly human scale with feet at
-   * y = 0, measure it once from its bind-pose bounding box and correct it
-   * so it always lands where the camera keyframes in AnimationService
-   * expect: ~1.75 units tall, centered on X/Z, feet at y = 0.
+   * Distintas herramientas (Mixamo, Meshy, Hi3D, un export manual de
+   * Blender...) exportan cada una a su escala y su pivote. En vez de confiar
+   * en que todo modelo futuro venga a escala humana con los pies en y = 0, lo
+   * medimos una vez desde su bounding box en bind pose y lo corregimos para
+   * que siempre aterrice donde la cámara del narrativo espera.
    */
   private normalize(inner: THREE.Object3D): void {
     const targetHeight = 2;
@@ -130,9 +186,9 @@ class GltfCharacter implements CharacterController {
     const size = box.getSize(new THREE.Vector3());
 
     if (size.y > 0.0001) {
-      // Always fit to targetHeight — no dead zone. A "close enough, skip
-      // it" tolerance sounds safe but silently leaves badly-scaled imports
-      // (a common outcome of photogrammetry → auto-rig pipelines) uncorrected.
+      // Siempre se ajusta a targetHeight — sin zona muerta. Una tolerancia
+      // "ya está bastante cerca, sáltatelo" suena prudente pero deja pasar en
+      // silencio imports mal escalados.
       const scale = targetHeight / size.y;
       inner.scale.setScalar(scale);
       box = new THREE.Box3().setFromObject(inner);
@@ -152,26 +208,60 @@ class GltfCharacter implements CharacterController {
       const match = clips.find((c) => aliases.some((a) => c.name.toLowerCase().includes(a)));
       if (match) this.clips.set(state, match);
     }
-    // Fallback: if nothing matched by name, just use whatever clips exist in order.
+    // Fallback: si nada casó por nombre, usar los clips que haya, en orden.
     if (this.clips.size === 0 && clips.length) {
       (Object.keys(CLIP_ALIASES) as CharacterState[]).forEach((state, i) => {
         if (clips[i]) this.clips.set(state, clips[i]);
       });
     }
+
+    for (const state of IN_PLACE_STATES) {
+      const clip = this.clips.get(state);
+      if (clip) this.clips.set(state, stripHorizontalRootMotion(clip));
+    }
   }
 
-  play(state: CharacterState, opts: { crossfade?: number; loop?: boolean } = {}): void {
+  /** Crea la acción la primera vez y la deja viva para siempre. */
+  private action(state: CharacterState): THREE.AnimationAction | null {
+    const cached = this.actions.get(state);
+    if (cached) return cached;
+
     const clip = this.clips.get(state);
-    if (!clip) return;
-    const nextAction = this.mixer.clipAction(clip);
-    nextAction.reset();
-    nextAction.setLoop(opts.loop === false ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
-    nextAction.clampWhenFinished = opts.loop === false;
-    nextAction.enabled = true;
-    nextAction.fadeIn(opts.crossfade ?? 0.4);
-    this.currentAction?.fadeOut(opts.crossfade ?? 0.4);
-    nextAction.play();
-    this.currentAction = nextAction;
+    if (!clip) return null;
+
+    const action = this.mixer.clipAction(clip);
+    action.setLoop(THREE.LoopRepeat, Infinity);
+    action.clampWhenFinished = false;
+    action.enabled = true;
+    action.weight = 0;
+    action.play();
+    this.actions.set(state, action);
+    return action;
+  }
+
+  applyLayers(layers: readonly AnimationLayer[]): void {
+    // Todo a cero primero: así una capa que desaparece del array no se queda
+    // colgada aportando peso residual.
+    for (const action of this.actions.values()) action.weight = 0;
+
+    for (const layer of layers) {
+      const action = this.action(layer.state);
+      if (!action) continue;
+
+      action.enabled = true;
+      action.weight = layer.weight;
+
+      if (layer.phase === undefined) {
+        // Corre libre: el mixer lo avanza con el delta real.
+        action.timeScale = 1;
+      } else {
+        // Scrubbed: timeScale 0 congela el avance interno del mixer, de modo
+        // que `time` es exclusivamente lo que escribimos aquí. Reproducir
+        // hacia atrás es simplemente escribir un `time` menor.
+        action.timeScale = 0;
+        action.time = wrap01(layer.phase) * action.getClip().duration;
+      }
+    }
   }
 
   update(delta: number): void {
@@ -180,18 +270,60 @@ class GltfCharacter implements CharacterController {
 
   dispose(): void {
     this.mixer.stopAllAction();
+    this.actions.clear();
   }
 }
 
 /**
- * Low-poly procedural stand-in so the full experience is reviewable before
- * the definitive GLB exists. Implements the exact same play()/update() API,
- * so dropping roberto.glb into /assets/models later requires no code
- * changes — ModelLoaderService will pick it up automatically.
+ * Devuelve una copia del clip sin traslación horizontal en la cadera.
+ * La X la manda el scroll; el clip solo debe aportar la zancada y el rebote
+ * vertical. Sin esto, un Walking con root motion arrastra al personaje por su
+ * cuenta y rompe la sincronía con el timeline.
+ */
+function stripHorizontalRootMotion(clip: THREE.AnimationClip): THREE.AnimationClip {
+  const out = clip.clone();
+  let stripped = false;
+
+  for (const track of out.tracks) {
+    const dot = track.name.lastIndexOf('.');
+    if (dot < 0) continue;
+    const node = track.name.slice(0, dot);
+    const property = track.name.slice(dot + 1);
+    if (property !== 'position' || !/hips?$/i.test(node)) continue;
+
+    const values = track.values;
+    const x0 = values[0];
+    const z0 = values[2];
+    for (let i = 0; i < values.length; i += 3) {
+      values[i] = x0; // X congelada
+      values[i + 2] = z0; // Z congelada — la vertical (i + 1) se respeta
+    }
+    stripped = true;
+  }
+
+  if (stripped) {
+    console.info(`[ModelLoaderService] Root motion horizontal anulado en el clip "${clip.name}".`);
+  }
+  return out;
+}
+
+/**
+ * Stand-in procedural low-poly para poder revisar la experiencia antes de que
+ * exista el GLB definitivo. Implementa exactamente la misma API applyLayers()/
+ * update(), incluida la fase scrubbed, así que el comportamiento frente al
+ * scroll es idéntico al del modelo real.
  */
 class PlaceholderCharacter implements CharacterController {
   readonly root = new THREE.Group();
   readonly usingPlaceholder = true;
+  readonly availableStates: ReadonlySet<CharacterState> = new Set<CharacterState>([
+    'Idle',
+    'Walking',
+    'Typing',
+    'Looking',
+    'Standing',
+    'Motorcycle',
+  ]);
 
   private head!: THREE.Mesh;
   private torso!: THREE.Mesh;
@@ -200,7 +332,10 @@ class PlaceholderCharacter implements CharacterController {
   private legL!: THREE.Group;
   private legR!: THREE.Group;
 
-  private state: CharacterState = 'Idle';
+  /** Capa dominante, para los estados aún no cubiertos por el timeline. */
+  private dominant: CharacterState = 'Idle';
+  private walkWeight = 0;
+  private walkPhase = 0;
 
   constructor() {
     this.build();
@@ -246,30 +381,39 @@ class PlaceholderCharacter implements CharacterController {
     return g;
   }
 
-  play(state: CharacterState): void {
-    this.state = state;
+  applyLayers(layers: readonly AnimationLayer[]): void {
+    this.walkWeight = 0;
+    let best = -1;
+    for (const layer of layers) {
+      if (layer.state === 'Walking') {
+        this.walkWeight = layer.weight;
+        this.walkPhase = layer.phase ?? this.walkPhase;
+      }
+      if (layer.weight > best) {
+        best = layer.weight;
+        this.dominant = layer.state;
+      }
+    }
   }
 
   update(_delta: number, elapsed: number): void {
-    const t = elapsed;
-    // Every state is a small hand-authored procedural loop — cheap, but
-    // distinct enough per section to sell the narrative until the GLB lands.
-    switch (this.state) {
-      case 'Walking':
-        this.armL.rotation.x = Math.sin(t * 6) * 0.6;
-        this.armR.rotation.x = -Math.sin(t * 6) * 0.6;
-        this.legL.rotation.x = -Math.sin(t * 6) * 0.6;
-        this.legR.rotation.x = Math.sin(t * 6) * 0.6;
-        this.root.position.y = Math.abs(Math.sin(t * 6)) * 0.03;
-        break;
+    // Fase 1: mezcla explícita Idle <-> Walking, con el ciclo de zancada
+    // gobernado por la fase que llega del scroll (nunca por `elapsed`).
+    if (this.dominant === 'Idle' || this.dominant === 'Walking') {
+      this.blendIdleWalk(elapsed);
+      return;
+    }
+
+    // Estados aún no cubiertos por el timeline: bucles procedurales simples.
+    switch (this.dominant) {
       case 'Typing':
-        this.armL.rotation.x = -1.15 + Math.sin(t * 14) * 0.05;
-        this.armR.rotation.x = -1.15 + Math.cos(t * 14) * 0.05;
+        this.armL.rotation.x = -1.15 + Math.sin(elapsed * 14) * 0.05;
+        this.armR.rotation.x = -1.15 + Math.cos(elapsed * 14) * 0.05;
         this.head.rotation.x = 0.25;
         this.resetLegs();
         break;
       case 'Looking':
-        this.head.rotation.y = Math.sin(t * 1.4) * 0.35;
+        this.head.rotation.y = Math.sin(elapsed * 1.4) * 0.35;
         this.resetLimbs();
         break;
       case 'Motorcycle':
@@ -280,16 +424,31 @@ class PlaceholderCharacter implements CharacterController {
         this.torso.rotation.x = 0.15;
         break;
       case 'Standing':
-        this.resetLimbs();
-        this.torso.rotation.z = Math.sin(t * 0.5) * 0.02;
-        break;
-      case 'Idle':
       default:
         this.resetLimbs();
-        this.torso.position.y = 1.05 + Math.sin(t * 1.6) * 0.01;
-        this.head.rotation.y = Math.sin(t * 0.6) * 0.08;
+        this.torso.rotation.z = Math.sin(elapsed * 0.5) * 0.02;
         break;
     }
+  }
+
+  private blendIdleWalk(elapsed: number): void {
+    const w = this.walkWeight;
+    const swing = Math.sin(this.walkPhase * Math.PI * 2);
+
+    // Pose de caminar (scrubbed) mezclada con la de reposo (tiempo real).
+    this.armL.rotation.x = swing * 0.6 * w;
+    this.armR.rotation.x = -swing * 0.6 * w;
+    this.legL.rotation.x = -swing * 0.6 * w;
+    this.legR.rotation.x = swing * 0.6 * w;
+
+    this.head.rotation.x = 0;
+    this.torso.rotation.x = 0;
+    this.torso.rotation.z = 0;
+
+    const walkBob = Math.abs(swing) * 0.03;
+    const idleBreath = Math.sin(elapsed * 1.6) * 0.01;
+    this.torso.position.y = 1.05 + THREE.MathUtils.lerp(idleBreath, walkBob, w);
+    this.head.rotation.y = Math.sin(elapsed * 0.6) * 0.08 * (1 - w);
   }
 
   private resetLimbs(): void {

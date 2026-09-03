@@ -10,9 +10,17 @@
   </p>
 
   <ul class="about__traits">
-    <li class="about__trait" data-reveal *ngFor="let t of traits">
-      <span class="about__trait-label">{{ t.label }}</span>
-      <span class="about__trait-detail">{{ t.detail }}</span>
+    <li class="trait-card" data-reveal *ngFor="let t of traits">
+      <span class="trait-card__sheen" aria-hidden="true"></span>
+
+      <span class="trait-card__label">{{ t.label }}</span>
+
+      <h3 class="trait-card__title">
+        <span class="trait-card__icon" aria-hidden="true">{{ t.icon }}</span>
+        {{ t.title }}
+      </h3>
+
+      <p class="trait-card__detail">{{ t.detail }}</p>
     </li>
   </ul>
 </section>

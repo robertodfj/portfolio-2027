@@ -130,7 +130,7 @@ export const CAMERA = {
    * lo justo — y ese alejamiento alarga a su vez el recorrido de salida del
    * personaje, que se calcula del semiancho real.
    */
-  REQUIRED_HALF_WIDTH: 2.5,
+  REQUIRED_HALF_WIDTH: 2.6,
 
   /**
    * Tope de alejamiento. En vertical extremo (9:16) cumplir el semiancho
@@ -170,9 +170,10 @@ export const MOTORBIKE = {
   /**
    * Dimensión mayor en unidades de mundo. El GLB trae su propia escala de
    * export, así que se normaliza igual que el personaje en vez de confiar en
-   * ella. El personaje mide 2, así que 1.4 la deja a ~2/3 de su altura.
+   * ella. El personaje mide 2, así que 2.8 la deja claramente por encima de
+   * él — que es la intención: en su sección la moto manda.
    */
-  TARGET_HEIGHT: 1.4,
+  TARGET_HEIGHT: 2.8,
 
   /** Giro continuo sobre su eje Y, en radianes por segundo. */
   SPIN_SPEED: 0.45,
@@ -192,9 +193,13 @@ export const MOTORBIKE = {
   ENTER_DELAY: 0.02,
   ENTER_FADE: 0.1,
 
-  /** La SALIDA sí se ancla a la sección: se va cuando la sección se va. */
-  EXIT_AT: 0.85,
-  EXIT_FADE: 0.15,
+  /**
+   * La SALIDA sí se ancla a la sección, en fracciones de su tramo en pantalla.
+   * 0.68 + 0.14 => desaparecida al 82% del tramo, unos 18vh antes que con el
+   * 0.85 anterior: se va mientras aún se está leyendo la sección, no al final.
+   */
+  EXIT_AT: 0.68,
+  EXIT_FADE: 0.14,
 
   /** Intensidad del env map propio (no se toca el resto de la escena). */
   ENV_INTENSITY: 0.9,

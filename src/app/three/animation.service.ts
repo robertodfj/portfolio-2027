@@ -12,8 +12,9 @@ import {
   TimelineSample,
 } from './character-timeline';
 import { MotorbikeProp } from './motorbike-prop';
+import { buildMotorcycleRider } from './motorcycle-rider';
 import { buildParticleField } from './scene-props';
-import { AMBIENT, MOTORBIKE } from './narrative.config';
+import { AMBIENT, MOTORBIKE, RIDER } from './narrative.config';
 
 /** Clave con la que se sigue el tramo de "Más allá del código". */
 const ABOUT_SECTION = 'about';
@@ -125,9 +126,17 @@ export class AnimationService {
   };
 
   private async loadMotorbike(): Promise<void> {
-    const scene = await this.modelLoader.loadProp(MOTORBIKE.PATH);
-    if (!scene) return;
-    this.motorbike = new MotorbikeProp(scene, this.scene.renderer);
+    // Los dos GLB no dependen entre sí para cargar — en paralelo.
+    const [motorbikeScene, riderScene] = await Promise.all([
+      this.modelLoader.loadProp(MOTORBIKE.PATH),
+      this.modelLoader.loadProp(RIDER.PATH),
+    ]);
+    if (!motorbikeScene) return;
+
+    this.motorbike = new MotorbikeProp(motorbikeScene, this.scene.renderer);
+    // roberto.glb es opcional aquí igual que en cualquier otro prop: si no
+    // carga, la moto se ve sola en vez de romper la escena.
+    if (riderScene) this.motorbike.attachRider(buildMotorcycleRider(riderScene));
     this.scene.scene.add(this.motorbike.root);
   }
 

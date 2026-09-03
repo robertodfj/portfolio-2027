@@ -131,6 +131,35 @@ const wrap01 = (v: number): number => {
 };
 
 /**
+ * Corrección de escala/pivote compartida por cualquier humanoide que entre en
+ * la escena (el personaje que camina y, ahora, el jinete de la moto). Mide la
+ * bounding box en bind pose y la ajusta a `targetHeight` unidades, centrada en
+ * X/Z, con los pies en y = -(targetHeight / 2).
+ *
+ * Extraída de GltfCharacter.normalize() para que motorcycle-rider.ts reutilice
+ * exactamente la misma convención (mismo origen, misma escala por altura) sin
+ * duplicar la fórmula — cualquier humanoide normalizado con esta función cae
+ * en el mismo sistema de coordenadas, condición necesaria para que las
+ * constantes de asiento/manillar/estriberas en narrative.config.ts (medidas
+ * una vez, a mano, sobre este mismo convenio) sigan siendo válidas.
+ */
+export function normalizeHumanoid(inner: THREE.Object3D, targetHeight = 2): void {
+  let box = new THREE.Box3().setFromObject(inner);
+  const size = box.getSize(new THREE.Vector3());
+
+  if (size.y > 0.0001) {
+    const scale = targetHeight / size.y;
+    inner.scale.setScalar(scale);
+    box = new THREE.Box3().setFromObject(inner);
+  }
+
+  const center = box.getCenter(new THREE.Vector3());
+  inner.position.x -= center.x;
+  inner.position.z -= center.z;
+  inner.position.y -= box.min.y + targetHeight / 2;
+}
+
+/**
  * Camino real GLB: grafo de escena + AnimationMixer + búsqueda de clips.
  *
  * Las AnimationAction se crean UNA sola vez (perezosamente, cacheadas) y se
@@ -181,25 +210,13 @@ class GltfCharacter implements CharacterController {
    * que siempre aterrice donde la cámara del narrativo espera.
    */
   private normalize(inner: THREE.Object3D): void {
-    const targetHeight = 2;
-    let box = new THREE.Box3().setFromObject(inner);
-    const size = box.getSize(new THREE.Vector3());
-
-    if (size.y > 0.0001) {
-      // Siempre se ajusta a targetHeight — sin zona muerta. Una tolerancia
-      // "ya está bastante cerca, sáltatelo" suena prudente pero deja pasar en
-      // silencio imports mal escalados.
-      const scale = targetHeight / size.y;
-      inner.scale.setScalar(scale);
-      box = new THREE.Box3().setFromObject(inner);
-    }
-
-    const center = box.getCenter(new THREE.Vector3());
-    inner.position.x -= center.x;
-    inner.position.z -= center.z;
-    inner.position.y -= box.min.y + 1;
+    // Siempre se ajusta a targetHeight — sin zona muerta. Una tolerancia
+    // "ya está bastante cerca, sáltatelo" suena prudente pero deja pasar en
+    // silencio imports mal escalados.
+    const before = new THREE.Box3().setFromObject(inner).getSize(new THREE.Vector3());
+    normalizeHumanoid(inner);
     console.info(
-      `[ModelLoaderService] Modelo normalizado — altura original: ${size.y.toFixed(2)}u, escala aplicada: ${inner.scale.x.toFixed(3)}x.`,
+      `[ModelLoaderService] Modelo normalizado — altura original: ${before.y.toFixed(2)}u, escala aplicada: ${inner.scale.x.toFixed(3)}x.`,
     );
   }
 

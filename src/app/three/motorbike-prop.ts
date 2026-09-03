@@ -12,8 +12,11 @@ import { MOTORBIKE } from './narrative.config';
  * Jerarquía interna:
  *   root     posición/escala en mundo, la presencia escala aquí
  *    └ spin  rotación continua sobre el eje Y
- *       └ inner  el GLB, desplazado para que su centro caiga en el origen
- *                del pivote — sin esto la moto orbitaría en vez de girar.
+ *       ├ inner  el GLB, desplazado para que su centro caiga en el origen
+ *       │        del pivote — sin esto la moto orbitaría en vez de girar.
+ *       └ rider  (opcional) Roberto montado — hermano de `inner` en el MISMO
+ *                espacio local, así que hereda automáticamente el giro, la
+ *                presencia y la inclinación de la moto sin código adicional.
  */
 export class MotorbikeProp {
   readonly root = new THREE.Group();
@@ -41,6 +44,17 @@ export class MotorbikeProp {
     this.root.rotation.z = MOTORBIKE.TILT_Z;
 
     this.setPresence(0);
+  }
+
+  /**
+   * Cuelga al jinete (ya posado, ver motorcycle-rider.ts) como hermano de
+   * `inner` dentro de `spin`. A partir de aquí, moto y jinete son UNA sola
+   * unidad para el resto de esta clase: setPresence/update/dispose no
+   * necesitan saber que el jinete existe, porque vive en el mismo espacio
+   * local y hereda su transform.
+   */
+  attachRider(rider: THREE.Group): void {
+    this.spin.add(rider);
   }
 
   /**

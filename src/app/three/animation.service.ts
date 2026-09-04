@@ -14,6 +14,7 @@ import {
 import { MotorbikeProp } from './motorbike-prop';
 import { buildMotorcycleRider } from './motorcycle-rider';
 import { buildParticleField } from './scene-props';
+import { PointerInteractionService } from './pointer-interaction.service';
 import { AMBIENT, MOTORBIKE, RIDER } from './narrative.config';
 
 /** Clave con la que se sigue el tramo de "Más allá del código". */
@@ -52,6 +53,8 @@ export class AnimationService {
   private readonly camOffset = new THREE.Vector3();
   /** Contexto medido (layout + encuadre) que el timeline necesita. Reutilizado. */
   private readonly context: TimelineContext = { aboutTop: 0, visibleHalfWidth: 0 };
+  /** Para no escribir document.body.style.cursor cuando no ha cambiado. */
+  private cursorIsPointer = false;
 
   /**
    * Array de capas estable: se muta in situ, nunca se recrea, y el
@@ -68,6 +71,7 @@ export class AnimationService {
     private cameraSvc: CameraService,
     private scroll: ScrollProgressService,
     private modelLoader: ModelLoaderService,
+    private pointer: PointerInteractionService,
   ) {}
 
   init(character: CharacterController, scrollHost: HTMLElement): void {
@@ -113,17 +117,41 @@ export class AnimationService {
     this.character?.update(delta, elapsed);
 
     if (this.motorbike) {
-      // Presencia <- scroll (reversible). Giro <- reloj (continuo).
+      // Presencia <- scroll (reversible). Posición <- cámara/encuadre.
       const range = this.scroll.sectionRange(ABOUT_SECTION);
       this.motorbike.setPresence(range ? motorbikePresence(progress, this.sample, range) : 0);
       this.motorbike.setPlacement(this.cameraSvc.camera.position.x, this.cameraSvc.visibleHalfWidth);
-      this.motorbike.update(elapsed);
     }
 
     if (this.particles) this.particles.rotation.y = elapsed * AMBIENT.PARTICLE_SPIN;
 
     this.cameraSvc.update();
+
+    if (this.motorbike) {
+      // Three.js recalcula matrixWorld dentro de renderer.render(), que corre
+      // DESPUÉS de este callback — sin este par de líneas, el rayo se
+      // lanzaría contra dónde estaban la moto y la cámara el frame anterior,
+      // no donde acaban de colocarse arriba.
+      this.motorbike.root.updateMatrixWorld(true);
+      this.cameraSvc.camera.updateMatrixWorld(true);
+
+      // Hover <- ratón (ralentiza). Clic <- ratón (impulso de giro). Es la
+      // única interacción de toda la escena que no viene del scroll.
+      const hovered = this.motorbike.updatePointer(this.pointer.ndc, this.cameraSvc.camera);
+      if (hovered && this.pointer.consumeClick()) this.motorbike.kick();
+      this.motorbike.update(delta);
+      this.setCursorPointer(hovered);
+    } else {
+      this.pointer.consumeClick(); // descarta clics mientras la moto no existe
+    }
   };
+
+  /** Pequeña señal visual de que la moto es interactiva — solo escribe el DOM si cambia. */
+  private setCursorPointer(pointer: boolean): void {
+    if (pointer === this.cursorIsPointer) return;
+    this.cursorIsPointer = pointer;
+    document.body.style.cursor = pointer ? 'pointer' : '';
+  }
 
   private async loadMotorbike(): Promise<void> {
     // Los dos GLB no dependen entre sí para cargar — en paralelo.
@@ -193,5 +221,6 @@ export class AnimationService {
   dispose(): void {
     this.scroll.dispose();
     this.motorbike?.dispose();
+    this.setCursorPointer(false);
   }
 }

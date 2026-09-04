@@ -191,12 +191,57 @@ export const MOTORBIKE = {
    */
   TARGET_HEIGHT: 2.35,
 
+  /**
+   * Escala del conjunto YA MONTADO (moto + jinete juntos), aplicada sobre
+   * `root` — el grupo que envuelve a los dos. A propósito NO se toca
+   * TARGET_HEIGHT para esto: ese normaliza solo el GLB de la moto, y todo lo
+   * de RIDER (SEAT, GRIP_L/R, PEG_L/R) está anclado a ESE sistema de
+   * coordenadas — cambiar TARGET_HEIGHT obligaría a reescalar los cuatro a
+   * mano otra vez. Escalando `root` en cambio, moto y jinete crecen juntos
+   * de forma rígida sin mover ni un milímetro la pose ya ajustada.
+   *
+   * 1.1 = +10%, a petición explícita. setPresence() y setPlacement() ya
+   * cuentan con este factor (ver ambas).
+   */
+  SCENE_SCALE: 1.1,
+
   /** Giro continuo sobre su eje Y, en radianes por segundo. */
   SPIN_SPEED: 0.45,
 
-  /** Inclinación fija, para que no se lea como un perfil plano al girar. */
+  /**
+   * Interactividad con el ratón — la ÚNICA parte de toda la moto que
+   * reacciona al puntero en vez de al scroll/reloj. Ver MotorbikeProp.update:
+   * es también el único sitio de esa clase que acumula estado frame a frame
+   * (integra una velocidad angular) en lugar de derivarse de un valor
+   * absoluto — con velocidad variable no hay forma de calcular el ángulo sin
+   * memoria, así que aquí sí toca.
+   */
+  /** Fracción de SPIN_SPEED mientras el puntero está encima de la moto. */
+  HOVER_SPEED_SCALE: 0.3,
+  /**
+   * Con qué rapidez se acerca la velocidad actual a la deseada (1/s) al
+   * entrar o salir del hover. Un acercamiento exponencial, no un salto —
+   * mismo patrón que SCROLL.SMOOTHING. Mayor = transición más brusca.
+   */
+  HOVER_EASE: 4,
+  /** Velocidad angular extra (rad/s) que añade cada clic sobre la moto. */
+  CLICK_KICK: 5,
+  /**
+   * Con qué rapidez se disipa el impulso del clic (1/s) — un empujón que
+   * decae solo, no un interruptor. Mayor = frena antes.
+   */
+  KICK_FRICTION: 1.2,
+
+  /**
+   * Inclinación fija del conjunto moto+jinete (ambos cuelgan del mismo
+   * `root`, así que giran juntos con esto — no hace falta tocar nada de
+   * RIDER). TILT_X es balanceo lateral (banking, para que no se lea como un
+   * perfil plano al girar) — se queda. TILT_Z era cabeceo hacia delante
+   * (bajaba el morro ~0.084u y subía la cola otro tanto): a petición
+   * explícita, a 0 para que quede horizontal.
+   */
   TILT_X: 0.1,
-  TILT_Z: -0.06,
+  TILT_Z: 0,
 
   /**
    * La ENTRADA se ancla al instante exacto en que el personaje termina de
@@ -335,12 +380,26 @@ export const RIDER = {
 
   /**
    * Puños del manillar. L = lado izquierdo del personaje, R = derecho.
-   * Reescalados ×0.95 junto con MOTORBIKE.TARGET_HEIGHT — siguen siendo la
-   * posición real de BONE_L_GRIP/BONE_R_GRIP, solo que ahora expresada en el
-   * sistema de coordenadas más pequeño que deja la moto al 95%.
+   *
+   * IMPORTANTE — RADIO MÁXIMO DE ALCANCE: el hombro está en, aproximadamente,
+   * (-0.03, 0.61, ±0.18) [depende un poco de SEAT/LEAN_DEG, se recalcula
+   * solo si se tocan]. El brazo (bíceps + antebrazo) mide en total ≈0.5615
+   * de aquí a la mano. Cualquier punto que pongas en GRIP_L/R MÁS LEJOS que
+   * eso del hombro NO se alcanza de verdad: el codo se bloquea en línea
+   * recta (180°) y la mano se queda corta, colgando en la dirección del
+   * objetivo pero sin llegar — exactamente lo que pasó con (0.5145, 0.1062,
+   * ±0.3501): estaba a 0.756 del hombro, un 35% fuera de alcance.
+   *
+   * Para comprobarlo tú mismo: distancia_3D(hombro, tu_punto) tiene que ser
+   * ≤ ~0.55 (dejando un pelín de margen antes de bloquear del todo).
+   *
+   * Valores actuales: misma DIRECCIÓN que el intento anterior (más adelante,
+   * más arriba y más ancho que el original) pero recortada al radio real —
+   * mano exacta (error 0.0000), codo a 126° (cómodo, ni estirado ni
+   * bloqueado). Sigue reescalado ×0.95 junto con MOTORBIKE.TARGET_HEIGHT.
    */
-  GRIP_L: new THREE.Vector3(0.5145, 0.1062, -0.3501),
-  GRIP_R: new THREE.Vector3(0.5145, 0.1062, 0.3501),
+  GRIP_L: new THREE.Vector3(0.3311, 0.3863, -0.2937),
+  GRIP_R: new THREE.Vector3(0.3304, 0.3863, 0.2935),
 
   /**
    * Empuje adicional "hacia fuera" del codo (a lo largo de Z, alejándolo del

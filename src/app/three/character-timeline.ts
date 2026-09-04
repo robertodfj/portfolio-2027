@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA, MOTORBIKE, WALK } from './narrative.config';
+import { CAMERA, DESK, MOTORBIKE, WALK } from './narrative.config';
 import { SectionRange } from './scroll-progress.service';
 
 /**
@@ -178,4 +178,135 @@ export function motorbikePresence(
   const exitAt = nextSectionRange.top - exitLeadProgress;
   const rampOut = 1 - smoothstep(exitAt - exitFadeProgress, exitAt, progress);
   return rampIn * rampOut;
+}
+
+/**
+ * Lo que la fase "escritorio" no puede saber por sí misma: los anclajes de
+ * layout de las tres secciones de las que cuelga (dónde arranca la caminata,
+ * y dónde giran cámara/personaje después). `techTop`/`contactTop` llegan a 0
+ * mientras esa sección no se haya podido medir todavía — igual que
+ * `SectionRange.top` en el resto del archivo.
+ */
+export interface DeskContext {
+  /** `top` de #experience: ancla el fin de la caminata (ENTER_LEAD_VH antes). */
+  sectionTop: number;
+  /** DESK.ENTER_LEAD_VH / ENTER_SPAN_VH ya convertidos a `progress` (ver ScrollProgressService.vhToProgress). */
+  enterLeadProgress: number;
+  enterSpanProgress: number;
+  /** `top` de #technologies y #contact — anclas 2ª y 3ª de la ruta de cámara. */
+  techTop: number;
+  contactTop: number;
+}
+
+export interface DeskSample {
+  /** false hasta que arranca la caminata hacia la mesa; a partir de ahí, para siempre. */
+  active: boolean;
+  position: THREE.Vector3;
+  rotationY: number;
+  /** Peso de Walking mientras llega (1 -> 0 en el tramo SIT_BLEND final). */
+  walkBlend: number;
+  walkPhase: number;
+  /** Peso de Typing (1 - walkBlend, ya sentado se queda fijo a 1). */
+  typingBlend: number;
+  cameraPosition: THREE.Vector3;
+  cameraLookAt: THREE.Vector3;
+}
+
+export function createDeskSample(): DeskSample {
+  return {
+    active: false,
+    position: new THREE.Vector3(),
+    rotationY: 0,
+    walkBlend: 0,
+    walkPhase: 0,
+    typingBlend: 0,
+    cameraPosition: new THREE.Vector3(),
+    cameraLookAt: new THREE.Vector3(),
+  };
+}
+
+/** Vectores de trabajo para evaluateDesk — cero asignaciones por frame. */
+const deskCamPos = new THREE.Vector3();
+const deskCamLook = new THREE.Vector3();
+
+/**
+ * Evalúa la fase "escritorio": caminar hasta la silla, sentarse (fundido
+ * Walking -> Typing) y, a partir de ahí, una ruta de cámara + giro sutil del
+ * personaje de 3 anclas (llegada / tecnologías / contacto). Tan pura como
+ * `evaluateTimeline`: mismo `progress` -> mismo resultado siempre, así que es
+ * tan reversible como el resto del narrativo, sin ningún caso especial.
+ *
+ * `fromCameraPosition/LookAt` es la cámara de la fase 1 EN ESE MISMO frame
+ * (ya congelada tras la salida del personaje): el punto de partida del primer
+ * tramo de esta ruta, para que el relevo de cámara no dé un salto.
+ */
+export function evaluateDesk(
+  progress: number,
+  ctx: DeskContext,
+  fromCameraPosition: THREE.Vector3,
+  fromCameraLookAt: THREE.Vector3,
+  out: DeskSample,
+): DeskSample {
+  const start = ctx.sectionTop - ctx.enterLeadProgress;
+  out.active = ctx.sectionTop > 0 && progress >= start;
+  if (!out.active) return out;
+
+  // --- 1. Recorrido normalizado de la caminata hacia la silla --------------
+  const span = ctx.enterSpanProgress;
+  const travel = span > 0 ? clamp01((progress - start) / span) : 1;
+  const arrivalProgress = start + span;
+
+  // --- 2. Posición --------------------------------------------------------
+  out.position.lerpVectors(DESK.WALK_START, DESK.SEAT, travel);
+
+  // --- 3. Fotograma del clip Walking, misma unidad que la fase 1 ----------
+  const distance = Math.abs(out.position.x - DESK.WALK_START.x);
+  out.walkPhase = wrap01(distance / WALK.CYCLE_DISTANCE);
+
+  // --- 4. Fundido Walking -> Typing, al final del recorrido ---------------
+  const sitBlend = smoothstep(1 - DESK.SIT_BLEND, 1, travel);
+  out.walkBlend = 1 - sitBlend;
+  out.typingBlend = sitBlend;
+
+  // --- 5. Orientación: gira hacia la mesa en los últimos pasos, y sigue ----
+  //        girando (sutil) sección a sección una vez sentado.
+  const turnFactor = smoothstep(1 - DESK.TURN_WINDOW, 1, travel);
+  let rotY: number = THREE.MathUtils.lerp(DESK.ENTER_ROT_Y, DESK.SEAT_ROT_Y, turnFactor);
+
+  // --- 6. Ruta de cámara (+ giro) de 3 anclas, evaluada siempre pero solo
+  //        usada una vez sentado (travel === 1) — así no hace falta otro
+  //        camino de código para la parte "aún no sentado".
+  deskCamPos.copy(DESK.CAMERA_POSITION);
+  deskCamLook.copy(DESK.CAMERA_LOOK_AT);
+  let seatedRotY: number = DESK.SEAT_ROT_Y;
+
+  if (ctx.techTop > arrivalProgress) {
+    const t1 = smoothstep(arrivalProgress, ctx.techTop, progress);
+    deskCamPos.lerpVectors(DESK.CAMERA_POSITION, DESK.TECH_CAMERA_POSITION, t1);
+    deskCamLook.lerpVectors(DESK.CAMERA_LOOK_AT, DESK.TECH_CAMERA_LOOK_AT, t1);
+    seatedRotY = THREE.MathUtils.lerp(DESK.SEAT_ROT_Y, DESK.TECH_ROT_Y, t1);
+
+    if (ctx.contactTop > ctx.techTop) {
+      const t2 = smoothstep(ctx.techTop, ctx.contactTop, progress);
+      deskCamPos.lerp(DESK.CONTACT_CAMERA_POSITION, t2);
+      deskCamLook.lerp(DESK.CONTACT_CAMERA_LOOK_AT, t2);
+      seatedRotY = THREE.MathUtils.lerp(seatedRotY, DESK.CONTACT_ROT_Y, t2);
+    }
+  }
+
+  if (travel >= 1) rotY = seatedRotY;
+  out.rotationY = rotY;
+
+  // --- 7. Cámara: releva a la de la fase 1 durante la caminata, se instala
+  //        del todo en la ruta de anclas en cuanto se sienta. -------------
+  if (travel < 1) {
+    const camBlend = smoothstep(0, DESK.CAMERA_BLEND, travel);
+    out.cameraPosition.lerpVectors(fromCameraPosition, DESK.CAMERA_POSITION, camBlend);
+    out.cameraLookAt.lerpVectors(fromCameraLookAt, DESK.CAMERA_LOOK_AT, camBlend);
+  } else {
+    out.cameraPosition.copy(deskCamPos);
+    out.cameraLookAt.copy(deskCamLook);
+  }
+
+  return out;
 }

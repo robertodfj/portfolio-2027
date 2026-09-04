@@ -5,7 +5,11 @@ import { AnimationLayer, CharacterController, ModelLoaderService } from './model
 import { ScrollProgressService } from './scroll-progress.service';
 import { ThreeSceneService } from './three-scene.service';
 import {
+  createDeskSample,
   createTimelineSample,
+  DeskContext,
+  DeskSample,
+  evaluateDesk,
   evaluateTimeline,
   motorbikePresence,
   TimelineContext,
@@ -13,14 +17,17 @@ import {
 } from './character-timeline';
 import { MotorbikeProp } from './motorbike-prop';
 import { buildMotorcycleRider } from './motorcycle-rider';
-import { buildParticleField } from './scene-props';
+import { buildDeskSetup, buildParticleField } from './scene-props';
 import { PointerInteractionService } from './pointer-interaction.service';
-import { AMBIENT, MOTORBIKE, RIDER } from './narrative.config';
+import { AMBIENT, DESK, MOTORBIKE, RIDER } from './narrative.config';
 
 /** Clave con la que se sigue el tramo de "Más allá del código". */
 const ABOUT_SECTION = 'about';
-/** Clave con la que se sigue el tramo de "experiencia.log" — de aquí cuelga la salida de la moto. */
+/** Clave con la que se sigue el tramo de "experiencia.log" — de aquí cuelgan la salida de la moto y la llegada a la mesa. */
 const EXPERIENCE_SECTION = 'experience';
+/** Claves de las dos secciones siguientes: 2ª y 3ª ancla de la ruta de cámara del escritorio. */
+const TECH_SECTION = 'technologies';
+const CONTACT_SECTION = 'contact';
 
 /**
  * Orquestador del narrativo. Es la única pieza que conoce a la vez el scroll,
@@ -40,6 +47,7 @@ export class AnimationService {
   private character?: CharacterController;
   private particles?: THREE.Points;
   private motorbike?: MotorbikeProp;
+  private deskGroup?: THREE.Group;
 
   /**
    * Sin clip de reposo no hay nada con lo que mezclar: la suma de pesos
@@ -51,10 +59,20 @@ export class AnimationService {
 
   /** Muestra reutilizada cada frame — cero asignaciones en el bucle. */
   private readonly sample: TimelineSample = createTimelineSample();
+  /** Muestra de la fase "escritorio", igual de reutilizada. */
+  private readonly deskSample: DeskSample = createDeskSample();
   /** Vector de trabajo para el offset de cámara, también reutilizado. */
   private readonly camOffset = new THREE.Vector3();
   /** Contexto medido (layout + encuadre) que el timeline necesita. Reutilizado. */
   private readonly context: TimelineContext = { aboutTop: 0, visibleHalfWidth: 0 };
+  /** Contexto medido de la fase "escritorio". Reutilizado. */
+  private readonly deskContext: DeskContext = {
+    sectionTop: 0,
+    enterLeadProgress: 0,
+    enterSpanProgress: 0,
+    techTop: 0,
+    contactTop: 0,
+  };
   /** Para no escribir document.body.style.cursor cuando no ha cambiado. */
   private cursorIsPointer = false;
 
@@ -66,6 +84,9 @@ export class AnimationService {
   private readonly layers: AnimationLayer[] = [
     { state: 'Idle', weight: 1 },
     { state: 'Walking', weight: 0, phase: 0 },
+    // Sin `phase`: corre libre con el reloj, igual que Idle — una vez
+    // sentado se queda escribiendo indefinidamente mientras dure el scroll.
+    { state: 'Typing', weight: 0 },
   ];
 
   constructor(
@@ -85,12 +106,20 @@ export class AnimationService {
     );
     this.scene.scene.add(this.particles);
 
+    this.deskGroup = buildDeskSetup();
+    this.deskGroup.position.copy(DESK.DESK_GROUP_POSITION);
+    this.deskGroup.rotation.y = DESK.DESK_GROUP_ROTATION_Y;
+    this.deskGroup.visible = false;
+    this.scene.scene.add(this.deskGroup);
+
     this.idleAvailable = character.availableStates.has('Idle');
     this.warnAboutMissingClips(character);
 
     this.scroll.attach(scrollHost);
     this.scroll.trackSection(ABOUT_SECTION, MOTORBIKE.SECTION_SELECTOR);
     this.scroll.trackSection(EXPERIENCE_SECTION, MOTORBIKE.EXIT_SECTION_SELECTOR);
+    this.scroll.trackSection(TECH_SECTION, DESK.TECH_SECTION_SELECTOR);
+    this.scroll.trackSection(CONTACT_SECTION, DESK.CONTACT_SECTION_SELECTOR);
     this.scene.onUpdate(this.tick);
 
     // La moto pesa ~2 MB con 46 texturas: se carga aparte para no retrasar la
@@ -192,26 +221,49 @@ export class AnimationService {
 
     const s = evaluateTimeline(progress, this.context, this.sample);
 
-    if (this.character) {
-      this.character.root.position.copy(s.position);
-      this.character.root.rotation.y = s.rotationY;
+    // Igual de vivo: el punto de arranque y las anclas de cámara posteriores
+    // se remiden en cada frame, así que un resize/relayout los recoloca solo.
+    this.deskContext.sectionTop = this.scroll.sectionRange(EXPERIENCE_SECTION)?.top ?? 0;
+    this.deskContext.enterLeadProgress = this.scroll.vhToProgress(DESK.ENTER_LEAD_VH);
+    this.deskContext.enterSpanProgress = this.scroll.vhToProgress(DESK.ENTER_SPAN_VH);
+    this.deskContext.techTop = this.scroll.sectionRange(TECH_SECTION)?.top ?? 0;
+    this.deskContext.contactTop = this.scroll.sectionRange(CONTACT_SECTION)?.top ?? 0;
+    const d = evaluateDesk(progress, this.deskContext, s.cameraPosition, s.cameraLookAt, this.deskSample);
 
-      this.layers[0].weight = this.idleAvailable ? 1 - s.walkBlend : 0;
-      this.layers[1].weight = this.idleAvailable ? s.walkBlend : 1;
-      this.layers[1].phase = s.walkPhase;
+    if (this.deskGroup) this.deskGroup.visible = d.active;
+
+    if (this.character) {
+      if (d.active) {
+        // Fase escritorio: gobierna ella, no la fase 1 — mismo personaje,
+        // reutilizado en vez de una segunda instancia del GLB.
+        this.character.root.position.copy(d.position);
+        this.character.root.rotation.y = d.rotationY;
+
+        this.layers[0].weight = 0;
+        this.layers[1].weight = d.walkBlend;
+        this.layers[1].phase = d.walkPhase;
+        this.layers[2].weight = d.typingBlend;
+      } else {
+        this.character.root.position.copy(s.position);
+        this.character.root.rotation.y = s.rotationY;
+
+        this.layers[0].weight = this.idleAvailable ? 1 - s.walkBlend : 0;
+        this.layers[1].weight = this.idleAvailable ? s.walkBlend : 1;
+        this.layers[1].phase = s.walkPhase;
+        this.layers[2].weight = 0;
+      }
       this.character.applyLayers(this.layers);
     }
 
     // La cámara se aleja a lo largo de su propio eje de visión lo justo para
     // que el encuadre quepa en el aspecto actual. Escalar el offset (y no la
     // posición) conserva el encuadre que decidió el timeline.
-    this.cameraSvc.lookTarget.copy(s.cameraLookAt);
+    const camPos = d.active ? d.cameraPosition : s.cameraPosition;
+    const camLook = d.active ? d.cameraLookAt : s.cameraLookAt;
+    this.cameraSvc.lookTarget.copy(camLook);
     this.cameraSvc.camera.position
-      .copy(s.cameraLookAt)
-      .addScaledVector(
-        this.camOffset.subVectors(s.cameraPosition, s.cameraLookAt),
-        this.cameraSvc.distanceScale,
-      );
+      .copy(camLook)
+      .addScaledVector(this.camOffset.subVectors(camPos, camLook), this.cameraSvc.distanceScale);
   }
 
   private warnAboutMissingClips(character: CharacterController): void {

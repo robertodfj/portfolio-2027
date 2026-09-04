@@ -491,8 +491,88 @@ export const RIDER = {
  *  6. AMBIENTE
  *  ------------------------------------------------------------------ */
 export const AMBIENT = {
-  PARTICLES_DESKTOP: 140,
-  PARTICLES_MOBILE: 60,
+  PARTICLES_DESKTOP: 2000,
+  PARTICLES_MOBILE: 600,
   /** Radianes por segundo del campo de partículas (independiente del scroll). */
   PARTICLE_SPIN: (Math.PI * 2) / 240,
+} as const;
+
+/** ---------------------------------------------------------------------
+ *  7. ESCRITORIO — Roberto programando, desde "experiencia.log" en adelante.
+ *
+ *  A diferencia de la moto, esta pieza NO desaparece: a petición explícita
+ *  ("no desaparece, ahora serán movimientos de cámara para cada sección"),
+ *  el personaje llega andando, se sienta (fundido Walking -> Typing) y se
+ *  queda escribiendo el resto del recorrido. Lo que cambia sección a sección
+ *  ya no es su presencia, sino la CÁMARA (y un giro sutil del propio
+ *  personaje) — una ruta de 3 anclas (llegada / tecnologías / contacto),
+ *  interpolada igual de pura y reversible que el resto del timeline.
+ *  ------------------------------------------------------------------ */
+export const DESK = {
+  /** Sección cuyo `top` ancla el inicio de la caminata hacia la mesa. */
+  SECTION_SELECTOR: '#experience',
+  TECH_SECTION_SELECTOR: '#technologies',
+  CONTACT_SECTION_SELECTOR: '#contact',
+
+  /**
+   * Cuánto ANTES del título "En qué he estado trabajando" (en vh) arranca la
+   * caminata — así ya está en marcha cuando el título entra en pantalla,
+   * igual que la moto ya está lista cuando el personaje termina de salir de
+   * cuadro en la fase 1. Cae claramente después de EXIT_LEAD_VH de la moto
+   * (70vh), para que no se crucen: la moto ya se ha ido cuando esto arranca.
+   */
+  ENTER_LEAD_VH: 55,
+
+  /** Duración (en vh) de "caminar hasta la silla + sentarse". */
+  ENTER_SPAN_VH: 65,
+
+  /**
+   * Punto de partida, en mundo. Independiente de dónde acabó la fase 1 (esta
+   * fase vive bajo su PROPIA cámara, que ya no es la fija heredada de
+   * caminar): basta con que quede fuera del encuadre de CAMERA_POSITION, para
+   * que el personaje entre desde el borde igual que en la fase 1.
+   */
+  WALK_START: new THREE.Vector3(-3.5, WALK.BASE_Y, -0.1),
+
+  /** Punto de llegada (sentado) y orientación de cara a la mesa. */
+  SEAT: new THREE.Vector3(1.2, WALK.BASE_Y, -0.1),
+  /** Mirando de frente mientras camina hacia +X (misma convención que WALK_ROT_Y, en sentido contrario). */
+  ENTER_ROT_Y: Math.PI / 2,
+  /** Gira hacia la mesa/monitor en los últimos pasos, no de perfil total: sigue leyéndose de cara a cámara. */
+  SEAT_ROT_Y: -0.35,
+  /** Fracción final del recorrido (0-1) en la que ocurre el giro de llegada. Más corta que TURN_IN de la fase 1: aquí el giro remata el paso, no lo abre. */
+  TURN_WINDOW: 0.25,
+
+  /** Última fracción del recorrido en la que Walking cede peso a Typing — el "sentarse" es este fundido, no una pose cinemática literal. */
+  SIT_BLEND: 0.3,
+
+  /** Fracción del recorrido en la que la cámara termina de pasar de la vista fija de la fase 1 a CAMERA_POSITION/LOOK_AT. */
+  CAMERA_BLEND: 0.5,
+
+  /**
+   * Transform propio del grupo escritorio+silla+MacBook — deliberadamente
+   * SEPARADO de SEAT: alinear "dónde se sienta" con "dónde está la silla" es
+   * un ajuste visual (mover una malla unos centímetros), no debería obligar a
+   * re-derivar la cinemática de la caminata. Se tocan por separado.
+   */
+  DESK_GROUP_POSITION: new THREE.Vector3(1.55, 0, -0.55),
+  DESK_GROUP_ROTATION_Y: -0.35,
+
+  /**
+   * Ruta de cámara de 3 anclas, sección a sección. Cada ancla es
+   * POSITION + LOOK_AT (mismo par que CAMERA.POSITION/LOOK_AT de la fase 1) y,
+   * además, la orientación del personaje en ese punto — el "gira y se pone de
+   * otro lado" pedido explícitamente, con el mismo mecanismo que ya mueve la
+   * cámara: nada de tiempo, solo `progress`.
+   */
+  CAMERA_POSITION: new THREE.Vector3(1.0, 1.5, 4.3),
+  CAMERA_LOOK_AT: new THREE.Vector3(1.15, 1.05, -0.1),
+
+  TECH_CAMERA_POSITION: new THREE.Vector3(0.5, 1.6, 5.1),
+  TECH_CAMERA_LOOK_AT: new THREE.Vector3(0.75, 1.1, -0.15),
+  TECH_ROT_Y: 0.15,
+
+  CONTACT_CAMERA_POSITION: new THREE.Vector3(0.9, 1.7, 5.6),
+  CONTACT_CAMERA_LOOK_AT: new THREE.Vector3(1.0, 1.15, -0.1),
+  CONTACT_ROT_Y: -0.55,
 } as const;

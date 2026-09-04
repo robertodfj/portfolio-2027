@@ -255,12 +255,24 @@ export const MOTORBIKE = {
   ENTER_FADE: 0.1,
 
   /**
-   * La SALIDA sí se ancla a la sección, en fracciones de su tramo en pantalla.
-   * 0.68 + 0.14 => desaparecida al 82% del tramo, unos 18vh antes que con el
-   * 0.85 anterior: se va mientras aún se está leyendo la sección, no al final.
+   * La SALIDA ahora se ancla a la SIGUIENTE sección (a petición explícita:
+   * "que desaparezca 2 scrolls antes de llegar al texto de 'En qué he estado
+   * trabajando'", el título de #experience) — ya no al propio tramo de
+   * "Más allá del código".
    */
-  EXIT_AT: 0.68,
-  EXIT_FADE: 0.14,
+  EXIT_SECTION_SELECTOR: '#experience',
+
+  /**
+   * "2 scrolls" traducido a una distancia fija en vh: un "scroll" no tiene
+   * una magnitud real (varía muchísimo entre rueda de ratón, trackpad y
+   * sistema operativo), así que se aproxima a un par de gestos de scroll
+   * normales. Es el número a tocar si al verlo desaparece demasiado pronto o
+   * demasiado tarde respecto al título.
+   */
+  EXIT_LEAD_VH: 70,
+
+  /** Ancho del fundido de salida, también en vh — mismo motivo que arriba. */
+  EXIT_FADE_VH: 10,
 
   /** Intensidad del env map propio (no se toca el resto de la escena). */
   ENV_INTENSITY: 0.9,

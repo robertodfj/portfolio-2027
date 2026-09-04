@@ -51,6 +51,10 @@ export class ScrollProgressService implements OnDestroy {
    */
   private readonly sections = new Map<string, { selector: string; range: SectionRange }>();
 
+  /** Viewport y recorrido total en px, cacheados en cada medida — base de vhToProgress(). */
+  private viewportPx = 0;
+  private scrollablePx = 0;
+
   constructor(private zone: NgZone) {}
 
   attach(host: HTMLElement): void {
@@ -98,6 +102,8 @@ export class ScrollProgressService implements OnDestroy {
     const viewport = window.innerHeight;
     const scrollable = document.documentElement.scrollHeight - viewport;
     if (scrollable <= 0) return;
+    this.viewportPx = viewport;
+    this.scrollablePx = scrollable;
 
     const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -111,6 +117,18 @@ export class ScrollProgressService implements OnDestroy {
       entry.range.top = clamp01(top / scrollable);
       entry.range.leave = clamp01((top + rect.height) / scrollable);
     }
+  }
+
+  /**
+   * Convierte una distancia en vh (alturas de viewport) a la MISMA unidad de
+   * progress [0,1] que usa todo lo demás — para anclar cosas como "N vh antes
+   * de tal sección" sin hardcodear un progress que dependería de cuánto mida
+   * la página. 0 mientras el layout no se haya medido todavía (antes del
+   * primer refresh de ScrollTrigger).
+   */
+  vhToProgress(vh: number): number {
+    if (this.scrollablePx <= 0) return 0;
+    return ((vh / 100) * this.viewportPx) / this.scrollablePx;
   }
 
   /** Progreso crudo, sin suavizar (útil para depurar la sincronía). */

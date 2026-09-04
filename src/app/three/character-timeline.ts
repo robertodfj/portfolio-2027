@@ -147,25 +147,35 @@ export function evaluateTimeline(
  *
  *   ENTRADA -> al personaje. Arranca en cuanto termina de salir del cuadro,
  *              así no queda hueco muerto entre que él se va y ella llega.
- *   SALIDA  -> a la sección. Se va cuando "Más allá del código" se va.
+ *   SALIDA  -> a la SIGUIENTE sección (#experience): desaparece
+ *              EXIT_LEAD_VH antes de que su título entre en pantalla, no
+ *              cuando "Más allá del código" se va — así ya no queda ni rastro
+ *              de la moto para cuando el usuario llega al título siguiente.
  *
  * Igual de pura y reversible que el timeline del personaje: el mismo
  * `progress` da siempre el mismo valor, así que al subir se deshace idéntico.
+ *
+ * `exitLeadProgress`/`exitFadeProgress` llegan ya convertidos de vh a
+ * progress (ver ScrollProgressService.vhToProgress) — igual que
+ * TimelineContext, es lo único que esta función no puede saber por sí misma.
  */
 export function motorbikePresence(
   progress: number,
   sample: TimelineSample,
-  range: SectionRange,
+  nextSectionRange: SectionRange,
+  exitLeadProgress: number,
+  exitFadeProgress: number,
 ): number {
   // Unidad de referencia: el tramo de caminata (≈85vh, anclado al layout).
   const unit = sample.walkEndProgress;
   const start = sample.exitProgress + unit * MOTORBIKE.ENTER_DELAY;
   const rampIn = smoothstep(start, start + unit * MOTORBIKE.ENTER_FADE, progress);
 
-  const span = range.leave - range.top;
-  if (span <= 0) return rampIn;
+  // Sección aún sin medir (antes del primer refresh de ScrollTrigger): no
+  // recortar la salida con un `top` en 0, que la escondería de inmediato.
+  if (nextSectionRange.top <= 0) return rampIn;
 
-  const exitAt = range.top + span * MOTORBIKE.EXIT_AT;
-  const rampOut = 1 - smoothstep(exitAt, exitAt + span * MOTORBIKE.EXIT_FADE, progress);
+  const exitAt = nextSectionRange.top - exitLeadProgress;
+  const rampOut = 1 - smoothstep(exitAt - exitFadeProgress, exitAt, progress);
   return rampIn * rampOut;
 }

@@ -19,6 +19,8 @@ import { AMBIENT, MOTORBIKE, RIDER } from './narrative.config';
 
 /** Clave con la que se sigue el tramo de "Más allá del código". */
 const ABOUT_SECTION = 'about';
+/** Clave con la que se sigue el tramo de "experiencia.log" — de aquí cuelga la salida de la moto. */
+const EXPERIENCE_SECTION = 'experience';
 
 /**
  * Orquestador del narrativo. Es la única pieza que conoce a la vez el scroll,
@@ -88,6 +90,7 @@ export class AnimationService {
 
     this.scroll.attach(scrollHost);
     this.scroll.trackSection(ABOUT_SECTION, MOTORBIKE.SECTION_SELECTOR);
+    this.scroll.trackSection(EXPERIENCE_SECTION, MOTORBIKE.EXIT_SECTION_SELECTOR);
     this.scene.onUpdate(this.tick);
 
     // La moto pesa ~2 MB con 46 texturas: se carga aparte para no retrasar la
@@ -118,8 +121,20 @@ export class AnimationService {
 
     if (this.motorbike) {
       // Presencia <- scroll (reversible). Posición <- cámara/encuadre.
-      const range = this.scroll.sectionRange(ABOUT_SECTION);
-      this.motorbike.setPresence(range ? motorbikePresence(progress, this.sample, range) : 0);
+      // La salida cuelga de la SIGUIENTE sección (#experience), no de "Más
+      // allá del código" — ver el comentario de motorbikePresence.
+      const nextRange = this.scroll.sectionRange(EXPERIENCE_SECTION);
+      this.motorbike.setPresence(
+        nextRange
+          ? motorbikePresence(
+              progress,
+              this.sample,
+              nextRange,
+              this.scroll.vhToProgress(MOTORBIKE.EXIT_LEAD_VH),
+              this.scroll.vhToProgress(MOTORBIKE.EXIT_FADE_VH),
+            )
+          : 0,
+      );
       this.motorbike.setPlacement(this.cameraSvc.camera.position.x, this.cameraSvc.visibleHalfWidth);
     }
 

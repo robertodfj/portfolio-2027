@@ -1,0 +1,20 @@
+<button
+  type="button"
+  class="theme-toggle"
+  [attr.aria-label]="(theme.current() === 'dark' ? 'a11y.toLight' : 'a11y.toDark') | translate"
+  [attr.title]="(theme.current() === 'dark' ? 'a11y.toLight' : 'a11y.toDark') | translate"
+  (click)="theme.toggle()"
+>
+  <!-- En oscuro se ofrece el sol (lo que vas a activar), y al revés. -->
+  <svg *ngIf="theme.current() === 'dark'" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <circle cx="12" cy="12" r="4.2" />
+    <g stroke-linecap="round">
+      <path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6" />
+      <path d="M5.4 5.4l1.9 1.9M16.7 16.7l1.9 1.9M18.6 5.4l-1.9 1.9M7.3 16.7l-1.9 1.9" />
+    </g>
+  </svg>
+
+  <svg *ngIf="theme.current() === 'light'" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M20.5 14.4A8.6 8.6 0 0 1 9.6 3.5a8.7 8.7 0 1 0 10.9 10.9z" />
+  </svg>
+</button>

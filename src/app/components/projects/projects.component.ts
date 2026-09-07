@@ -7,13 +7,17 @@ import {
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { revealOnScroll } from '../../shared/reveal.util';
 
 interface Project {
+  /**
+   * Índice corto de la tarjeta Y clave de traducción a la vez: los textos
+   * viven en los JSON de i18n bajo projects.items.<index>. Reutilizarlo evita
+   * mantener dos identificadores en paralelo para lo mismo.
+   */
   index: string;
   icon?: string;
-  title: string;
-  description: string;
   stack: string[];
   githubUrl?: string;
   demoUrl?: string;
@@ -22,7 +26,7 @@ interface Project {
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss',
 })
@@ -33,51 +37,33 @@ export class ProjectsComponent implements AfterViewInit {
   readonly projects: Project[] = [
     {
       index: 'rm',
-      icon: '🤖',
-      title: 'Rick & Morty Telegram Bot',
-      description:
-        'API en .NET con C# orientada a jugabilidad y trading de objetos a través de comandos de Telegram: autenticación con JWT, tienda de items, compraventa entre jugadores y persistencia con SQL.',
+      icon: '🤖',
       stack: ['.NET', 'C#', 'JWT', 'Telegram API', 'SQL'],
     },
     {
       index: 'ma',
-      icon: '🍽️',
-      title: 'Mesero App',
-      description:
-        'Aplicación Android en Java para la gestión integral de bares: mesas, productos y comandas en tiempo real, control de stock, facturación automática por email y notificaciones. Persistencia con Room y SharedPreferences, UI reactiva con LiveData.',
+      icon: '🍽️',
       stack: ['Java', 'Android Studio', 'Room', 'LiveData'],
     },
     {
       index: 'mw',
-      icon: '🍽️',
-      title: 'Mesero Web',
-      description:
-        'Versión web del sistema de gestión de pedidos para restaurantes, con backend en Java y Spring Boot. En desarrollo activo.',
+      icon: '🍽️',
       stack: ['Java', 'Spring Boot'],
       demoUrl: 'https://www.youtube.com/watch?v=n2fKeVxJVg8&t=1s',
     },
     {
       index: 'mc',
-      icon: '☁️',
-      title: 'MiniCloud',
-      description:
-        'Sistema multiusuario para subir, descargar y eliminar archivos de forma segura, con cifrado automático y almacenamiento por usuario. Atiende múltiples clientes en paralelo mediante hilos en Java. Mi proyecto más reciente.',
-      stack: ['Java', 'Multithreading', 'Cifrado'],
+      icon: '☁️',
+      stack: ['Java', 'Multithreading', 'Encryption'],
     },
     {
       index: 'tf',
-      icon: '📋',
-      title: 'TaskFlow',
-      description:
-        'Aplicación de gestión de proyectos inspirada en Jira: creación y asignación de tareas, seguimiento de estado en tiempo real. Backend con Spring Boot y frontend en React.',
+      icon: '📋',
       stack: ['Spring Boot', 'React'],
     },
     {
       index: 'rps',
-      icon: '✊',
-      title: 'Rock Paper Scissors',
-      description:
-        'Piedra, papel o tijera contra la cámara: combina lógica de juego en Java con visión por computadora, usando OpenCV para detectar en tiempo real la forma de la mano del usuario.',
+      icon: '✊',
       stack: ['Java', 'OpenCV'],
     },
   ];

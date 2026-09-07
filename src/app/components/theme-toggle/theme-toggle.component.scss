@@ -1,0 +1,37 @@
+:host { display: inline-flex; }
+
+.theme-toggle {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition:
+    color 0.3s var(--easing),
+    border-color 0.3s var(--easing),
+    transform 0.3s var(--easing);
+
+  svg {
+    width: 17px;
+    height: 17px;
+    /* El sol se dibuja con trazos y la luna maciza, así que el SVG lleva
+       ambos: `fill: currentColor` para la luna y stroke para los rayos. */
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 1.6;
+  }
+
+  /* El disco del sol es un círculo lleno; sus rayos, líneas sueltas. */
+  svg g path { fill: none; }
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: rotate(-15deg);
+  }
+}

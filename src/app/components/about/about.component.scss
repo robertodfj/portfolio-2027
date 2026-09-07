@@ -72,11 +72,11 @@
 
   overflow: hidden;
 
-  background: rgba(14, 14, 18, 0.82);
+  background: var(--surface);
 
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--edge-strong);
 
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 50px var(--shadow-soft);
 
   transition:
     transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
@@ -86,7 +86,7 @@
   &:hover {
     transform: translateY(-4px);
 
-    box-shadow: 0 35px 75px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 35px 75px var(--shadow-strong);
   }
 
   /* ==========================================================
@@ -101,7 +101,7 @@
 
     background: radial-gradient(
       220px circle at 50% 0%,
-      rgba(255, 255, 255, 0.07),
+      var(--edge),
       transparent 65%
     );
 
@@ -126,7 +126,7 @@
     font-size: 0.72rem;
     letter-spacing: 0.06em;
 
-    color: #fff;
+    color: var(--ink);
     opacity: 0.7;
 
     &::before {
@@ -170,9 +170,9 @@
 
     font-size: 0.95rem;
 
-    background: rgba(255, 255, 255, 0.035);
+    background: var(--surface-soft);
 
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--edge);
 
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }

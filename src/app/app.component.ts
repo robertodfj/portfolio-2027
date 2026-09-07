@@ -1,5 +1,8 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageService } from './shared/language.service';
+import { ThemeService } from './shared/theme.service';
 import { ThreeSceneService } from './three/three-scene.service';
 import { CameraService } from './three/camera.service';
 import { ModelLoaderService } from './three/model-loader.service';
@@ -18,6 +21,7 @@ import { ContactComponent } from './components/contact/contact.component';
   standalone: true,
   imports: [
     CommonModule,
+    TranslateModule,
     NavbarComponent,
     LoadingScreenComponent,
     HeroComponent,
@@ -42,7 +46,21 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     private cameraSvc: CameraService,
     private modelLoader: ModelLoaderService,
     private animationSvc: AnimationService,
-  ) {}
+    private language: LanguageService,
+    private theme: ThemeService,
+  ) {
+    // Antes del primer render: así no se ve un parpadeo de idioma o de tema.
+    this.language.init();
+    this.theme.init();
+
+    // La escena 3D no ve el CSS — hay que pasarle el tema a mano. El effect
+    // se dispara también en el arranque, así que cubre el estado inicial.
+    effect(() => {
+      const theme = this.theme.current();
+      this.sceneSvc.applyTheme(theme); // niebla y suelo
+      this.animationSvc.applyTheme(theme); // partículas
+    });
+  }
 
   async ngAfterViewInit(): Promise<void> {
     this.sceneSvc.mount(this.canvasRef.nativeElement);

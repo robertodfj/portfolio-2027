@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.1rem var(--section-pad-x);
-  background: linear-gradient(to bottom, rgba(8, 8, 10, 0.75), transparent);
+  background: linear-gradient(to bottom, var(--scrim), transparent);
   backdrop-filter: blur(6px);
 
   &__progress {
@@ -67,6 +67,16 @@
 
   &__cta { padding: 0.55em 1.2em; font-size: 0.8rem; }
 
+  /* El interruptor de tema vive FUERA de __links a propósito: ese bloque se
+     convierte en el menú desplegable en móvil, y el tema tiene que seguir
+     accesible con el menú cerrado. */
+  &__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    z-index: 1;
+  }
+
   &__toggle {
     display: none;
     flex-direction: column;
@@ -93,7 +103,7 @@
       align-items: flex-start;
       gap: 1.4rem;
       padding: 6rem 1.5rem 2rem;
-      background: rgba(6, 6, 8, 0.98);
+      background: var(--scrim-solid);
       transform: translateY(-100%);
       transition: transform 0.4s var(--easing);
       &--open { transform: translateY(0); }

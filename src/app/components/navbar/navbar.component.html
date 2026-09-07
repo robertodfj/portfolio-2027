@@ -6,14 +6,24 @@
     robertodfj<span class="nav__dim">.com</span>
   </a>
 
-  <nav class="nav__links" [class.nav__links--open]="menuOpen()" aria-label="Navegación principal">
+  <nav class="nav__links" [class.nav__links--open]="menuOpen()" [attr.aria-label]="'nav.aria' | translate">
     <button class="nav__link" type="button" *ngFor="let link of links" (click)="goTo(link.id)">
-      {{ link.label }}
+      {{ 'nav.' + link.id | translate }}
     </button>
-    <a class="btn nav__cta" href="#contact" (click)="goTo('contact')">Contactar</a>
+    <a class="btn nav__cta" href="#contact" (click)="goTo('contact')">{{ 'nav.cta' | translate }}</a>
   </nav>
 
-  <button class="nav__toggle" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="Abrir menú">
-    <span></span><span></span>
-  </button>
+  <div class="nav__tools">
+    <app-theme-toggle />
+
+    <button
+      class="nav__toggle"
+      type="button"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      [attr.aria-label]="'nav.openMenu' | translate"
+    >
+      <span></span><span></span>
+    </button>
+  </div>
 </header>

@@ -1,19 +1,22 @@
 <section id="experience" class="experience">
-  <p class="eyebrow" data-reveal>experiencia.log</p>
-  <h2 class="section-title" data-reveal>En qué he estado trabajando</h2>
+  <p class="eyebrow" data-reveal>{{ 'experience.eyebrow' | translate }}</p>
+  <h2 class="section-title" data-reveal>{{ 'experience.title' | translate }}</h2>
 
   <ol class="timeline">
     <li class="timeline__entry" data-reveal *ngFor="let item of items">
       <span class="timeline__node" aria-hidden="true"></span>
 
-      <span class="timeline__period">{{ item.period }}</span>
+      <span class="timeline__period">
+        {{ item.from }} — {{ item.to ?? ('experience.present' | translate) }}
+      </span>
 
       <h3 class="timeline__role">
-        {{ item.role }} <span class="timeline__company">· {{ item.company }}</span>
+        {{ 'experience.items.' + item.key + '.role' | translate }}
+        <span class="timeline__company">· {{ item.company }}</span>
       </h3>
 
       <ul class="timeline__bullets">
-        <li *ngFor="let b of item.bullets">{{ b }}</li>
+        <li *ngFor="let b of 'experience.items.' + item.key + '.bullets' | translate">{{ b }}</li>
       </ul>
 
       <ul class="timeline__stack">

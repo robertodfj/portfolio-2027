@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { revealOnScroll } from '../../shared/reveal.util';
 
 /**
@@ -9,46 +10,30 @@ import { revealOnScroll } from '../../shared/reveal.util';
  * legibles de un vistazo.
  */
 interface Trait {
+  /** Clave bajo about.traits.* en los JSON de i18n. */
+  key: string;
   /** Etiqueta corta en mono, equivalente al índice de la tarjeta de proyecto. */
   label: string;
   icon: string;
-  title: string;
-  detail: string;
 }
 
 @Component({
   selector: 'app-about',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
 })
 export class AboutComponent implements AfterViewInit {
+  /**
+   * Solo lo que NO se traduce: la etiqueta en mono (un código, igual en los
+   * dos idiomas) y el icono. Título y texto viven en los JSON de i18n.
+   */
   readonly traits: Trait[] = [
-    {
-      label: 'CODE',
-      icon: '💻',
-      title: 'Construir cosas',
-      detail: 'Programar dejó de ser solo trabajo: casi cualquier idea acaba en un proyecto real.',
-    },
-    {
-      label: 'GYM',
-      icon: '🏋️',
-      title: 'Entrenar',
-      detail: 'Mi rutina fuera de la pantalla para llegar despejado al resto del día.',
-    },
-    {
-      label: 'LEARN',
-      icon: '📚',
-      title: 'Formarme',
-      detail: 'Siempre con algo entre manos hasta entender cómo funciona por dentro.',
-    },
-    {
-      label: 'RIDE',
-      icon: '🏍️',
-      title: 'Las motos',
-      detail: 'Mi mayor pasión y donde busco los retos que no están en un teclado.',
-    },
+    { key: 'code', label: 'CODE', icon: '💻' },
+    { key: 'gym', label: 'GYM', icon: '🏋️' },
+    { key: 'learn', label: 'LEARN', icon: '📚' },
+    { key: 'ride', label: 'RIDE', icon: '🏍️' },
   ];
 
   constructor(private el: ElementRef<HTMLElement>) {}

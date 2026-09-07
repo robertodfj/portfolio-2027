@@ -2,6 +2,16 @@ import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import * as THREE from 'three';
 
 /**
+ * Equivalentes 3D de --stage de cada tema (ver styles.scss). La niebla debe
+ * ir al MISMO color que el fondo de la página: es lo que hace que lo lejano
+ * se disuelva en él en vez de recortarse contra él.
+ */
+const THEME_COLORS = {
+  dark: { fog: 0x08080a, ground: 0x0a0a0d, hemiGround: 0x0a0a0c },
+  light: { fog: 0xf3f3f1, ground: 0xe6e6e4, hemiGround: 0xd8d8dd },
+} as const;
+
+/**
  * Owns the renderer, the root scene, base lighting and the render loop.
  * Nothing narrative lives here — this is pure Three.js plumbing so that
  * components never touch WebGL directly.
@@ -15,6 +25,10 @@ export class ThreeSceneService implements OnDestroy {
   private clock = new THREE.Clock();
   private updateCallbacks: Array<(delta: number, elapsed: number) => void> = [];
   private isMobile = false;
+  /** Referencias guardadas solo para poder repintarlas al cambiar de tema. */
+  private ground?: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial>;
+  private hemi?: THREE.HemisphereLight;
+  private themeName: 'dark' | 'light' = 'dark';
 
   constructor(private zone: NgZone) {}
 
@@ -36,10 +50,45 @@ export class ThreeSceneService implements OnDestroy {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
 
-    this.scene.fog = new THREE.FogExp2(0x08080a, this.isMobile ? 0.03 : 0.018);
+    this.scene.fog = new THREE.FogExp2(THEME_COLORS[this.themeName].fog, this.isMobile ? 0.03 : 0.018);
     this.setupBaseLighting();
+    // El tema puede haberse pedido ANTES de montar (AppComponent lo resuelve
+    // en el constructor, para que no parpadee), así que se reaplica aquí ya
+    // con la escena construida.
+    this.applyTheme(this.themeName);
 
     window.addEventListener('resize', this.onResize, { passive: true });
+  }
+
+  /**
+   * La escena 3D no ve el CSS, así que el tema hay que pasárselo a mano. Solo
+   * hacen falta dos cosas: la NIEBLA (si se queda en negro sobre fondo claro,
+   * todo lo lejano se ensucia con un halo oscuro que delata el truco) y el
+   * plano de suelo. Los modelos no se tocan: una figura oscura sobre fondo
+   * claro se lee perfectamente, como un bodegón de producto.
+   *
+   * Se puede llamar antes de `mount()`: se queda anotado y se aplica al montar.
+   */
+  applyTheme(theme: 'dark' | 'light'): void {
+    this.themeName = theme;
+    const palette = THEME_COLORS[theme];
+    (this.scene.fog as THREE.FogExp2 | null)?.color.setHex(palette.fog);
+    this.hemi?.groundColor.setHex(palette.hemiGround);
+
+    if (this.ground) {
+      this.ground.material.color.setHex(palette.ground);
+      /*
+       * En claro el suelo se APAGA. En oscuro pasa desapercibido porque su
+       * color coincide con el fondo de la página, pero iluminado sobre un
+       * fondo casi blanco deja de coincidir: aparece una línea de horizonte
+       * a media pantalla y una sombra azulada despegada de los pies (el plano
+       * está en y = -1.02, un metro por debajo de ellos).
+       *
+       * Quitarlo no cuesta nada: la escena ya se apoyaba en su propia
+       * geometría, no en este plano.
+       */
+      this.ground.visible = theme === 'dark';
+    }
   }
 
   /** Register a per-frame callback (e.g. AnimationMixer.update, character idle sway). */
@@ -65,7 +114,8 @@ export class ThreeSceneService implements OnDestroy {
   }
 
   private setupBaseLighting(): void {
-    const hemi = new THREE.HemisphereLight(0x9aa5ff, 0x0a0a0c, 0.55);
+    const hemi = new THREE.HemisphereLight(0x9aa5ff, THEME_COLORS.dark.hemiGround, 0.55);
+    this.hemi = hemi;
     this.scene.add(hemi);
 
     const key = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -98,11 +148,12 @@ export class ThreeSceneService implements OnDestroy {
 
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(60, 60),
-      new THREE.MeshStandardMaterial({ color: 0x0a0a0d, roughness: 0.95, metalness: 0.05 }),
+      new THREE.MeshStandardMaterial({ color: THEME_COLORS.dark.ground, roughness: 0.95, metalness: 0.05 }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = !this.isMobile;
     ground.position.y = -1.02;
+    this.ground = ground;
     this.scene.add(ground);
   }
 

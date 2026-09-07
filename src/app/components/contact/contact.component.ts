@@ -1,9 +1,11 @@
 import { AfterViewInit, Component, ElementRef } from '@angular/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { revealOnScroll } from '../../shared/reveal.util';
 
 @Component({
   selector: 'app-contact',
   standalone: true,
+  imports: [TranslateModule],
   templateUrl: './contact.component.html',
   styleUrl: './contact.component.scss',
 })

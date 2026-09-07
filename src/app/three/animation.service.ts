@@ -76,6 +76,8 @@ export class AnimationService {
   };
   /** Para no escribir document.body.style.cursor cuando no ha cambiado. */
   private cursorIsPointer = false;
+  /** Tema pedido, para poder aplicarlo aunque llegue antes que la escena. */
+  private themeName: 'dark' | 'light' = 'dark';
 
   /**
    * Array de capas estable: se muta in situ, nunca se recrea, y el
@@ -105,6 +107,7 @@ export class AnimationService {
     this.particles = buildParticleField(
       this.scene.mobile ? AMBIENT.PARTICLES_MOBILE : AMBIENT.PARTICLES_DESKTOP,
     );
+    this.applyTheme(this.themeName);
     this.scene.scene.add(this.particles);
 
     // El mueble se monta EXACTAMENTE sobre el asiento (misma posición, misma
@@ -140,6 +143,23 @@ export class AnimationService {
 
   refresh(): void {
     this.scroll.refresh();
+  }
+
+  /**
+   * El campo de partículas es lo único de esta clase que depende del tema.
+   * En oscuro son puntos de acento que brillan sobre el negro; en claro ese
+   * mismo índigo al 50% sobre un fondo casi blanco se lee como motas de
+   * suciedad, así que se oscurecen y se bajan de opacidad hasta quedar en
+   * textura de fondo.
+   */
+  applyTheme(theme: 'dark' | 'light'): void {
+    // Igual que en ThreeSceneService: el tema puede pedirse antes de que
+    // exista el campo de partículas, así que se anota y se reaplica en init().
+    this.themeName = theme;
+    const material = this.particles?.material as THREE.PointsMaterial | undefined;
+    if (!material) return;
+    material.color.setHex(theme === 'dark' ? 0x6e7bff : 0x2b3080);
+    material.opacity = theme === 'dark' ? 0.5 : 0.22;
   }
 
   /**

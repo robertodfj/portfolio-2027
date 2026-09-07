@@ -1,13 +1,8 @@
 <section id="about" class="about">
-  <p class="eyebrow" data-reveal>sobre-mi.md</p>
-  <h2 class="section-title" data-reveal>Más allá del código</h2>
-  <p class="about__lead" data-reveal>
-    Me gusta construir cosas, aprender constantemente y convertir las ideas que tengo en proyectos reales.
-  </p>
-  <p class="about__lead" data-reveal>
-    Disfruto descubriendo nuevas tecnologías y experimentando con ellas, pero también me apasionan las motos, el mundo
-    del motory seguir buscando nuevos retos fuera de una pantalla.
-  </p>
+  <p class="eyebrow" data-reveal>{{ 'about.eyebrow' | translate }}</p>
+  <h2 class="section-title" data-reveal>{{ 'about.title' | translate }}</h2>
+  <p class="about__lead" data-reveal>{{ 'about.lead1' | translate }}</p>
+  <p class="about__lead" data-reveal>{{ 'about.lead2' | translate }}</p>
 
   <ul class="about__traits">
     <li class="trait-card" data-reveal *ngFor="let t of traits">
@@ -17,10 +12,10 @@
 
       <h3 class="trait-card__title">
         <span class="trait-card__icon" aria-hidden="true">{{ t.icon }}</span>
-        {{ t.title }}
+        {{ 'about.traits.' + t.key + '.title' | translate }}
       </h3>
 
-      <p class="trait-card__detail">{{ t.detail }}</p>
+      <p class="trait-card__detail">{{ 'about.traits.' + t.key + '.detail' | translate }}</p>
     </li>
   </ul>
 </section>

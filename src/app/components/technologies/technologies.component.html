@@ -1,6 +1,6 @@
 <section id="technologies" class="tech">
-  <p class="eyebrow" data-reveal>stack.json</p>
-  <h2 class="section-title" data-reveal>Con qué trabajo</h2>
+  <p class="eyebrow" data-reveal>{{ 'tech.eyebrow' | translate }}</p>
+  <h2 class="section-title" data-reveal>{{ 'tech.title' | translate }}</h2>
 
   <div class="tech__grid" data-reveal>
     <button
@@ -14,7 +14,7 @@
       [class.tech__item--active]="hovered() === t.name"
     >
       <span class="tech__name">{{ t.name }}</span>
-      <span class="tech__note">{{ t.note }}</span>
+      <span class="tech__note">{{ 'tech.notes.' + t.key | translate }}</span>
     </button>
   </div>
 </section>

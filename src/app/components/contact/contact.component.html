@@ -1,13 +1,12 @@
 <section id="contact" class="contact">
-  <p class="eyebrow" data-reveal>contacto.send()</p>
-  <h2 class="contact__title" data-reveal>¿Tienes un proyecto<br />en mente?</h2>
-  <p class="contact__lead" data-reveal>
-    Estoy buscando mi siguiente reto como desarrollador Full Stack.
-    Hablemos.
-  </p>
+  <p class="eyebrow" data-reveal>{{ 'contact.eyebrow' | translate }}</p>
+  <h2 class="contact__title" data-reveal>
+    {{ 'contact.titleLine1' | translate }}<br />{{ 'contact.titleLine2' | translate }}
+  </h2>
+  <p class="contact__lead" data-reveal>{{ 'contact.lead' | translate }}</p>
 
   <a class="btn btn--solid contact__cta" data-reveal [href]="'mailto:' + email">
-    Contactar ↗
+    {{ 'contact.cta' | translate }}
   </a>
 
   <div class="contact__links" data-reveal>

@@ -1,35 +1,38 @@
 import { AfterViewInit, Component, ElementRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { revealOnScroll } from '../../shared/reveal.util';
 
 interface Tech {
+  /** El nombre no se traduce: "Java" es "Java" en todos los idiomas. */
   name: string;
-  note: string;
+  /** Clave bajo tech.notes.* en los JSON de i18n. */
+  key: string;
 }
 
 @Component({
   selector: 'app-technologies',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './technologies.component.html',
   styleUrl: './technologies.component.scss',
 })
 export class TechnologiesComponent implements AfterViewInit {
   readonly technologies: Tech[] = [
-    { name: 'Java', note: 'Backend principal' },
-    { name: 'Spring Boot', note: 'APIs y servicios' },
-    { name: 'C#', note: 'Full stack .NET' },
-    { name: '.NET', note: 'Backend alternativo' },
-    { name: 'ASP.NET Core', note: 'APIs web' },
-    { name: 'Angular', note: 'SPA / frontend' },
-    { name: 'Vue', note: 'Frontend ligero' },
-    { name: 'JavaScript', note: 'Base del frontend' },
-    { name: 'TypeScript', note: 'Tipado a escala' },
-    { name: 'SQL', note: 'Modelado de datos' },
-    { name: 'REST API', note: 'Diseño de servicios' },
-    { name: 'Git', note: 'Control de versiones' },
-    { name: 'Postman', note: 'Testing de APIs' },
-    { name: 'Docker', note: 'Entornos reproducibles' },
+    { name: 'Java', key: 'java' },
+    { name: 'Spring Boot', key: 'spring' },
+    { name: 'C#', key: 'csharp' },
+    { name: '.NET', key: 'dotnet' },
+    { name: 'ASP.NET Core', key: 'aspnet' },
+    { name: 'Angular', key: 'angular' },
+    { name: 'Vue', key: 'vue' },
+    { name: 'JavaScript', key: 'javascript' },
+    { name: 'TypeScript', key: 'typescript' },
+    { name: 'SQL', key: 'sql' },
+    { name: 'REST API', key: 'rest' },
+    { name: 'Git', key: 'git' },
+    { name: 'Postman', key: 'postman' },
+    { name: 'Docker', key: 'docker' },
   ];
 
   readonly hovered = signal<string | null>(null);

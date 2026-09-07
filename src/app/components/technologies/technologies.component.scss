@@ -17,7 +17,7 @@
   }
 
   &__item {
-    background: rgba(8, 8, 10, 0.55);
+    background: var(--surface-dim);
     backdrop-filter: blur(6px);
     border: none;
     padding: 1.4rem 1.1rem;
@@ -30,7 +30,7 @@
     transition: background 0.3s var(--easing), transform 0.3s var(--easing);
 
     &--active {
-      background: rgba(110, 123, 255, 0.06);
+      background: rgba(var(--accent-rgb), 0.06);
       transform: translateY(-3px);
     }
   }

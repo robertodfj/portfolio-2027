@@ -26,7 +26,7 @@ main {
   height: 3rem;
   border-radius: 50%;
   border: 1px solid var(--line);
-  background: rgba(8, 8, 10, 0.7);
+  background: var(--scrim);
   backdrop-filter: blur(8px);
   color: var(--ink);
   font-size: 1.1rem;

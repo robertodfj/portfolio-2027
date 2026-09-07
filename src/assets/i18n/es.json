@@ -1,0 +1,160 @@
+{
+  "nav": {
+    "about": "Sobre mí",
+    "experience": "Experiencia",
+    "technologies": "Tecnologías",
+    "projects": "Proyectos",
+    "contact": "Contacto",
+    "cta": "Contactar",
+    "aria": "Navegación principal",
+    "openMenu": "Abrir menú"
+  },
+
+  "hero": {
+    "eyebrow": "portfolio.init()",
+    "available": "OPEN TO WORK",
+    "role": "Full Stack Developer",
+    "tagline": "Construyendo experiencias digitales con código.",
+    "scroll": "scroll",
+    "languageLabel": "Selecciona el idioma"
+  },
+
+  "about": {
+    "eyebrow": "sobre-mi.md",
+    "title": "Más allá del código",
+    "lead1": "Me gusta construir cosas, aprender constantemente y convertir las ideas que tengo en proyectos reales.",
+    "lead2": "Disfruto descubriendo nuevas tecnologías y experimentando con ellas, pero también me apasionan las motos, el mundo del motor y seguir buscando nuevos retos fuera de una pantalla.",
+    "traits": {
+      "code": {
+        "title": "Construir cosas",
+        "detail": "Programar dejó de ser solo trabajo: casi cualquier idea acaba en un proyecto real."
+      },
+      "gym": {
+        "title": "Entrenar",
+        "detail": "Mi rutina fuera de la pantalla para llegar despejado al resto del día."
+      },
+      "learn": {
+        "title": "Formarme",
+        "detail": "Siempre con algo entre manos hasta entender cómo funciona por dentro."
+      },
+      "ride": {
+        "title": "Las motos",
+        "detail": "Mi mayor pasión y donde busco los retos que no están en un teclado."
+      }
+    }
+  },
+
+  "experience": {
+    "eyebrow": "experiencia.log",
+    "title": "En qué he estado trabajando",
+    "present": "Presente",
+    "items": {
+      "slclab": {
+        "role": "Full Stack + IA Developer",
+        "bullets": [
+          "Desarrollo de soluciones para automatización de procesos de soporte mediante IA con .NET y Semantic Kernel.",
+          "Desarrollo de aplicaciones web con Angular.",
+          "Integración de APIs REST y automatización de flujos de trabajo.",
+          "Trabajo con SQL y Postman para integración y pruebas de servicios.",
+          "Uso de Git y metodologías ágiles Scrum."
+        ]
+      },
+      "getd": {
+        "role": "Junior .NET Full Stack Developer",
+        "bullets": [
+          "Desarrollo de aplicaciones web Full Stack con Vue.js y ASP.NET Core.",
+          "Creación e integración de APIs REST.",
+          "Desarrollo de lógica de negocio e integración con bases de datos.",
+          "Trabajo con Git en entornos colaborativos."
+        ]
+      },
+      "kyndryl": {
+        "role": "Java & Spring Boot Backend Developer",
+        "bullets": [
+          "Desarrollo de soluciones backend para automatización de procesos.",
+          "Desarrollo e integración de APIs REST con Java y Spring Boot.",
+          "Automatización de flujos de trabajo.",
+          "Gestión y consulta de datos mediante SQL.",
+          "Uso de Git y metodologías Scrum."
+        ]
+      }
+    }
+  },
+
+  "tech": {
+    "eyebrow": "stack.json",
+    "title": "Con qué trabajo",
+    "notes": {
+      "java": "Backend principal",
+      "spring": "APIs y servicios",
+      "csharp": "Full stack .NET",
+      "dotnet": "Backend alternativo",
+      "aspnet": "APIs web",
+      "angular": "SPA / frontend",
+      "vue": "Frontend ligero",
+      "javascript": "Base del frontend",
+      "typescript": "Tipado a escala",
+      "sql": "Modelado de datos",
+      "rest": "Diseño de servicios",
+      "git": "Control de versiones",
+      "postman": "Testing de APIs",
+      "docker": "Entornos reproducibles"
+    }
+  },
+
+  "projects": {
+    "eyebrow": "proyectos/",
+    "title": "Cosas que he construido",
+    "drag": "Arrastra para explorar",
+    "demo": "Ver demo ↗",
+    "code": "Ver código ↗",
+    "prev": "Proyecto anterior",
+    "next": "Siguiente proyecto",
+    "goTo": "Ir al proyecto {{ title }}",
+    "items": {
+      "rm": {
+        "title": "Rick & Morty Telegram Bot",
+        "description": "API en .NET con C# orientada a jugabilidad y trading de objetos a través de comandos de Telegram: autenticación con JWT, tienda de items, compraventa entre jugadores y persistencia con SQL."
+      },
+      "ma": {
+        "title": "Mesero App",
+        "description": "Aplicación Android en Java para la gestión integral de bares: mesas, productos y comandas en tiempo real, control de stock, facturación automática por email y notificaciones. Persistencia con Room y SharedPreferences, UI reactiva con LiveData."
+      },
+      "mw": {
+        "title": "Mesero Web",
+        "description": "Versión web del sistema de gestión de pedidos para restaurantes, con backend en Java y Spring Boot. En desarrollo activo."
+      },
+      "mc": {
+        "title": "MiniCloud",
+        "description": "Sistema multiusuario para subir, descargar y eliminar archivos de forma segura, con cifrado automático y almacenamiento por usuario. Atiende múltiples clientes en paralelo mediante hilos en Java. Mi proyecto más reciente."
+      },
+      "tf": {
+        "title": "TaskFlow",
+        "description": "Aplicación de gestión de proyectos inspirada en Jira: creación y asignación de tareas, seguimiento de estado en tiempo real. Backend con Spring Boot y frontend en React."
+      },
+      "rps": {
+        "title": "Rock Paper Scissors",
+        "description": "Piedra, papel o tijera contra la cámara: combina lógica de juego en Java con visión por computadora, usando OpenCV para detectar en tiempo real la forma de la mano del usuario."
+      }
+    }
+  },
+
+  "contact": {
+    "eyebrow": "contacto.send()",
+    "titleLine1": "¿Tienes un proyecto",
+    "titleLine2": "en mente?",
+    "lead": "Estoy buscando mi siguiente reto como desarrollador Full Stack. Hablemos.",
+    "cta": "Contactar ↗"
+  },
+
+  "loading": "LOADING EXPERIENCE",
+
+  "a11y": {
+    "scrollTop": "Volver arriba",
+    "placeholderModel": "Modelo 3D placeholder activo — sustituye src/assets/models/roberto.glb por el modelo definitivo.",
+    "toLight": "Cambiar a modo claro",
+    "toDark": "Cambiar a modo oscuro",
+    "langEs": "Cambiar el idioma a español",
+    "langEn": "Cambiar el idioma a inglés"
+  }
+}

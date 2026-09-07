@@ -1,0 +1,160 @@
+{
+  "nav": {
+    "about": "About",
+    "experience": "Experience",
+    "technologies": "Technologies",
+    "projects": "Projects",
+    "contact": "Contact",
+    "cta": "Get in touch",
+    "aria": "Main navigation",
+    "openMenu": "Open menu"
+  },
+
+  "hero": {
+    "eyebrow": "portfolio.init()",
+    "available": "OPEN TO WORK",
+    "role": "Full Stack Developer",
+    "tagline": "Building digital experiences with code.",
+    "scroll": "scroll",
+    "languageLabel": "Choose your language"
+  },
+
+  "about": {
+    "eyebrow": "about-me.md",
+    "title": "Beyond the code",
+    "lead1": "I like building things, learning constantly and turning the ideas I have into real projects.",
+    "lead2": "I enjoy discovering new technologies and experimenting with them, but I'm also passionate about motorcycles, the world of engines and chasing challenges away from a screen.",
+    "traits": {
+      "code": {
+        "title": "Building things",
+        "detail": "Coding stopped being just work: almost any idea ends up as a real project."
+      },
+      "gym": {
+        "title": "Training",
+        "detail": "My routine away from the screen, so I reach the rest of the day with a clear head."
+      },
+      "learn": {
+        "title": "Learning",
+        "detail": "Always with something in hand until I understand how it works inside."
+      },
+      "ride": {
+        "title": "Motorcycles",
+        "detail": "My biggest passion, and where I find the challenges that aren't on a keyboard."
+      }
+    }
+  },
+
+  "experience": {
+    "eyebrow": "experience.log",
+    "title": "What I've been working on",
+    "present": "Present",
+    "items": {
+      "slclab": {
+        "role": "Full Stack + AI Developer",
+        "bullets": [
+          "Building support-process automation with AI using .NET and Semantic Kernel.",
+          "Developing web applications with Angular.",
+          "Integrating REST APIs and automating workflows.",
+          "Working with SQL and Postman for service integration and testing.",
+          "Using Git and agile Scrum methodologies."
+        ]
+      },
+      "getd": {
+        "role": "Junior .NET Full Stack Developer",
+        "bullets": [
+          "Full Stack web development with Vue.js and ASP.NET Core.",
+          "Building and integrating REST APIs.",
+          "Developing business logic and database integration.",
+          "Working with Git in collaborative environments."
+        ]
+      },
+      "kyndryl": {
+        "role": "Java & Spring Boot Backend Developer",
+        "bullets": [
+          "Building backend solutions for process automation.",
+          "Developing and integrating REST APIs with Java and Spring Boot.",
+          "Workflow automation.",
+          "Managing and querying data with SQL.",
+          "Using Git and Scrum methodologies."
+        ]
+      }
+    }
+  },
+
+  "tech": {
+    "eyebrow": "stack.json",
+    "title": "What I work with",
+    "notes": {
+      "java": "Main backend",
+      "spring": "APIs and services",
+      "csharp": "Full stack .NET",
+      "dotnet": "Alternative backend",
+      "aspnet": "Web APIs",
+      "angular": "SPA / frontend",
+      "vue": "Lightweight frontend",
+      "javascript": "Frontend foundation",
+      "typescript": "Typing at scale",
+      "sql": "Data modelling",
+      "rest": "Service design",
+      "git": "Version control",
+      "postman": "API testing",
+      "docker": "Reproducible environments"
+    }
+  },
+
+  "projects": {
+    "eyebrow": "projects/",
+    "title": "Things I've built",
+    "drag": "Drag to explore",
+    "demo": "View demo ↗",
+    "code": "View code ↗",
+    "prev": "Previous project",
+    "next": "Next project",
+    "goTo": "Go to project {{ title }}",
+    "items": {
+      "rm": {
+        "title": "Rick & Morty Telegram Bot",
+        "description": "A .NET API in C# built around gameplay and item trading through Telegram commands: JWT authentication, item shop, player-to-player trading and SQL persistence."
+      },
+      "ma": {
+        "title": "Mesero App",
+        "description": "An Android app in Java for end-to-end bar management: tables, products and orders in real time, stock control, automatic email invoicing and notifications. Persistence with Room and SharedPreferences, reactive UI with LiveData."
+      },
+      "mw": {
+        "title": "Mesero Web",
+        "description": "The web version of the restaurant order management system, with a Java and Spring Boot backend. Actively in development."
+      },
+      "mc": {
+        "title": "MiniCloud",
+        "description": "A multi-user system to upload, download and delete files securely, with automatic encryption and per-user storage. Serves multiple clients in parallel using Java threads. My most recent project."
+      },
+      "tf": {
+        "title": "TaskFlow",
+        "description": "A project management app inspired by Jira: task creation and assignment, real-time status tracking. Spring Boot backend and React frontend."
+      },
+      "rps": {
+        "title": "Rock Paper Scissors",
+        "description": "Rock paper scissors against your camera: combines Java game logic with computer vision, using OpenCV to detect the shape of the user's hand in real time."
+      }
+    }
+  },
+
+  "contact": {
+    "eyebrow": "contact.send()",
+    "titleLine1": "Got a project",
+    "titleLine2": "in mind?",
+    "lead": "I'm looking for my next challenge as a Full Stack developer. Let's talk.",
+    "cta": "Get in touch ↗"
+  },
+
+  "loading": "LOADING EXPERIENCE",
+
+  "a11y": {
+    "scrollTop": "Back to top",
+    "placeholderModel": "3D placeholder model active — replace src/assets/models/roberto.glb with the final model.",
+    "toLight": "Switch to light mode",
+    "toDark": "Switch to dark mode",
+    "langEs": "Switch language to Spanish",
+    "langEn": "Switch language to English"
+  }
+}

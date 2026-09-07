@@ -1,60 +1,51 @@
 import { AfterViewInit, Component, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { revealOnScroll } from '../../shared/reveal.util';
 
+/**
+ * Aquí solo lo que NO se traduce. Cargo y viñetas viven en los JSON de i18n
+ * bajo experience.items.<key>; el nombre de la empresa y el stack son los
+ * mismos en los dos idiomas, y las fechas se parten en `from`/`to` para que
+ * "Presente" pueda traducirse sin tener que duplicar el rango entero.
+ */
 interface ExperienceItem {
-  role: string;
+  key: string;
   company: string;
-  period: string;
-  bullets: string[];
+  from: string;
+  /** null = sigue en el puesto; la plantilla pone "Presente"/"Present". */
+  to: string | null;
   stack: string[];
 }
 
 @Component({
   selector: 'app-experience',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './experience.component.html',
   styleUrl: './experience.component.scss',
 })
 export class ExperienceComponent implements AfterViewInit {
   readonly items: ExperienceItem[] = [
     {
-      role: 'Full Stack + IA Developer',
+      key: 'slclab',
       company: 'SLCLAB',
-      period: '2026 — Presente',
-      bullets: [
-        'Desarrollo de soluciones para automatización de procesos de soporte mediante IA con .NET y Semantic Kernel.',
-        'Desarrollo de aplicaciones web con Angular.',
-        'Integración de APIs REST y automatización de flujos de trabajo.',
-        'Trabajo con SQL y Postman para integración y pruebas de servicios.',
-        'Uso de Git y metodologías ágiles Scrum.',
-      ],
+      from: '2026',
+      to: null,
       stack: ['.NET', 'Semantic Kernel', 'Angular', 'REST API', 'SQL', 'Postman', 'Git', 'Scrum'],
     },
     {
-      role: 'Junior .NET Full Stack Developer',
+      key: 'getd',
       company: 'GETD',
-      period: '2025 — 2026',
-      bullets: [
-        'Desarrollo de aplicaciones web Full Stack con Vue.js y ASP.NET Core.',
-        'Creación e integración de APIs REST.',
-        'Desarrollo de lógica de negocio e integración con bases de datos.',
-        'Trabajo con Git en entornos colaborativos.',
-      ],
+      from: '2025',
+      to: '2026',
       stack: ['Vue.js', 'ASP.NET Core', 'REST API', 'SQL', 'Git'],
     },
     {
-      role: 'Java & Spring Boot Backend Developer',
+      key: 'kyndryl',
       company: 'Kyndryl',
-      period: '2024 — 2025',
-      bullets: [
-        'Desarrollo de soluciones backend para automatización de procesos.',
-        'Desarrollo e integración de APIs REST con Java y Spring Boot.',
-        'Automatización de flujos de trabajo.',
-        'Gestión y consulta de datos mediante SQL.',
-        'Uso de Git y metodologías Scrum.',
-      ],
+      from: '2024',
+      to: '2025',
       stack: ['Java', 'Spring Boot', 'REST API', 'SQL', 'Git', 'Scrum'],
     },
   ];

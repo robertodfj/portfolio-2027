@@ -14,9 +14,9 @@
 
   border-radius: 999px;
 
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--surface-soft);
 
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--edge);
 
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -34,9 +34,9 @@
 
   border-radius: 50%;
 
-  background: #65d68a;
+  background: var(--ok);
 
-  box-shadow: 0 0 10px rgba(101, 214, 138, 0.65);
+  box-shadow: 0 0 10px rgba(var(--ok-rgb), 0.65);
 
   animation: availabilityPulse 2s ease-in-out infinite;
 }
@@ -94,6 +94,11 @@
     color: var(--ink);
 
     max-width: 30ch;
+  }
+
+  &__lang {
+    display: block;
+    margin-top: 2.2rem;
   }
 
   &__scroll-cue {

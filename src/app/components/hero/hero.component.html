@@ -3,12 +3,12 @@
   <div class="hero__content">
 
     <p class="eyebrow" data-reveal>
-      portfolio.init()
+      {{ 'hero.eyebrow' | translate }}
     </p>
 
     <div class="hero__availability" data-reveal>
       <span class="hero__availability-dot"></span>
-      OPEN TO WORK
+      {{ 'hero.available' | translate }}
     </div>
 
     <h1 class="hero__name" data-reveal>
@@ -19,12 +19,14 @@
     </h1>
 
     <h2 class="hero__role" data-reveal>
-      Full Stack Developer
+      {{ 'hero.role' | translate }}
     </h2>
 
     <p class="hero__tagline" data-reveal>
-      Building digital experiences with code.
+      {{ 'hero.tagline' | translate }}
     </p>
+
+    <app-language-picker class="hero__lang" data-reveal />
 
   </div>
 
@@ -33,7 +35,7 @@
     data-reveal
     aria-hidden="true"
   >
-    <span>scroll</span>
+    <span>{{ 'hero.scroll' | translate }}</span>
 
     <div class="hero__scroll-line">
       <i></i>

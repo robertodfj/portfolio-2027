@@ -8,11 +8,11 @@
     data-reveal-project
   >
     <p class="eyebrow">
-      proyectos/
+      {{ 'projects.eyebrow' | translate }}
     </p>
 
     <h2 class="section-title">
-      Cosas que he construido
+      {{ 'projects.title' | translate }}
     </h2>
   </header>
 
@@ -26,7 +26,7 @@
       class="projects__arrow projects__arrow--prev"
       type="button"
       (click)="prev()"
-      aria-label="Proyecto anterior"
+      [attr.aria-label]="'projects.prev' | translate"
     >
       <span>←</span>
     </button>
@@ -77,13 +77,13 @@
             {{ p.icon }}
           </span>
 
-          {{ p.title }}
+          {{ 'projects.items.' + p.index + '.title' | translate }}
 
         </h3>
 
 
         <p class="project-card__desc">
-          {{ p.description }}
+          {{ 'projects.items.' + p.index + '.description' | translate }}
         </p>
 
 
@@ -124,7 +124,7 @@
             target="_blank"
             rel="noopener noreferrer"
           >
-            Ver demo ↗
+            {{ 'projects.demo' | translate }}
           </a>
 
         </div>
@@ -138,7 +138,7 @@
       class="projects__arrow projects__arrow--next"
       type="button"
       (click)="next()"
-      aria-label="Siguiente proyecto"
+      [attr.aria-label]="'projects.next' | translate"
     >
       <span>→</span>
     </button>
@@ -163,7 +163,7 @@
       "
       (click)="scrollToIndex(i)"
       [attr.aria-label]="
-        'Ir a ' + p.title
+        'projects.goTo' | translate: { title: ('projects.items.' + p.index + '.title' | translate) }
       "
     ></button>
 
@@ -175,7 +175,7 @@
     aria-hidden="true"
   >
     <span>↔</span>
-    <span>Arrastra para explorar</span>
+    <span>{{ 'projects.drag' | translate }}</span>
   </div>
 
 </section>

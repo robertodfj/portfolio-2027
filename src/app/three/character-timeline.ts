@@ -201,8 +201,12 @@ export interface DeskContext {
 export interface DeskSample {
   /** false hasta que arranca la caminata hacia la mesa; a partir de ahí, para siempre. */
   active: boolean;
+  /** Escala del personaje en esta fase (DESK.SCENE_SCALE, fija mientras `active`). */
+  scale: number;
   position: THREE.Vector3;
   rotationY: number;
+  /** Giro del CONJUNTO (personaje + mueble) sobre SEAT_ROT_Y, por sección. */
+  setupYaw: number;
   /** Peso de Walking mientras llega (1 -> 0 en el tramo SIT_BLEND final). */
   walkBlend: number;
   walkPhase: number;
@@ -215,8 +219,10 @@ export interface DeskSample {
 export function createDeskSample(): DeskSample {
   return {
     active: false,
+    scale: 1,
     position: new THREE.Vector3(),
     rotationY: 0,
+    setupYaw: 0,
     walkBlend: 0,
     walkPhase: 0,
     typingBlend: 0,
@@ -251,51 +257,58 @@ export function evaluateDesk(
   out.active = ctx.sectionTop > 0 && progress >= start;
   if (!out.active) return out;
 
+  out.scale = DESK.SCENE_SCALE;
+
   // --- 1. Recorrido normalizado de la caminata hacia la silla --------------
   const span = ctx.enterSpanProgress;
   const travel = span > 0 ? clamp01((progress - start) / span) : 1;
   const arrivalProgress = start + span;
 
-  // --- 2. Posición --------------------------------------------------------
-  out.position.lerpVectors(DESK.WALK_START, DESK.SEAT, travel);
+  // --- 2. Posición ---------------------------------------------------------
+  // El desplazamiento se agota ANTES que la ventana: la fracción SIT_BLEND
+  // final se dedica a sentarse EN EL SITIO. Y llega frenando (ease-out), que
+  // además acorta las zancadas al final por sí solo — el ciclo del clip sale
+  // de la distancia recorrida, así que sigue sin patinar ni un milímetro.
+  const walkT = DESK.SIT_BLEND < 1 ? clamp01(travel / (1 - DESK.SIT_BLEND)) : travel;
+  const approach = 1 - (1 - walkT) * (1 - walkT);
+  out.position.lerpVectors(DESK.WALK_START, DESK.SEAT, approach);
 
   // --- 3. Fotograma del clip Walking, misma unidad que la fase 1 ----------
   const distance = Math.abs(out.position.x - DESK.WALK_START.x);
   out.walkPhase = wrap01(distance / WALK.CYCLE_DISTANCE);
 
-  // --- 4. Fundido Walking -> Typing, al final del recorrido ---------------
+  // --- 4. Fundido Walking -> Typing, ya parado delante de la silla --------
   const sitBlend = smoothstep(1 - DESK.SIT_BLEND, 1, travel);
   out.walkBlend = 1 - sitBlend;
   out.typingBlend = sitBlend;
 
-  // --- 5. Orientación: gira hacia la mesa en los últimos pasos, y sigue ----
-  //        girando (sutil) sección a sección una vez sentado.
-  const turnFactor = smoothstep(1 - DESK.TURN_WINDOW, 1, travel);
-  let rotY: number = THREE.MathUtils.lerp(DESK.ENTER_ROT_Y, DESK.SEAT_ROT_Y, turnFactor);
-
-  // --- 6. Ruta de cámara (+ giro) de 3 anclas, evaluada siempre pero solo
-  //        usada una vez sentado (travel === 1) — así no hace falta otro
-  //        camino de código para la parte "aún no sentado".
+  // --- 5. Ruta de 3 anclas (llegada -> tecnologías -> contacto): cámara y
+  //        giro del conjunto. Se evalúa siempre; el giro solo se aplica una
+  //        vez sentado, y antes de la llegada vale 0 de forma natural
+  //        (smoothstep por debajo de su borde inferior).
   deskCamPos.copy(DESK.CAMERA_POSITION);
   deskCamLook.copy(DESK.CAMERA_LOOK_AT);
-  let seatedRotY: number = DESK.SEAT_ROT_Y;
+  let yaw = 0;
 
   if (ctx.techTop > arrivalProgress) {
     const t1 = smoothstep(arrivalProgress, ctx.techTop, progress);
     deskCamPos.lerpVectors(DESK.CAMERA_POSITION, DESK.TECH_CAMERA_POSITION, t1);
     deskCamLook.lerpVectors(DESK.CAMERA_LOOK_AT, DESK.TECH_CAMERA_LOOK_AT, t1);
-    seatedRotY = THREE.MathUtils.lerp(DESK.SEAT_ROT_Y, DESK.TECH_ROT_Y, t1);
+    yaw = THREE.MathUtils.lerp(0, DESK.TECH_YAW, t1);
 
     if (ctx.contactTop > ctx.techTop) {
       const t2 = smoothstep(ctx.techTop, ctx.contactTop, progress);
       deskCamPos.lerp(DESK.CONTACT_CAMERA_POSITION, t2);
       deskCamLook.lerp(DESK.CONTACT_CAMERA_LOOK_AT, t2);
-      seatedRotY = THREE.MathUtils.lerp(seatedRotY, DESK.CONTACT_ROT_Y, t2);
+      yaw = THREE.MathUtils.lerp(yaw, DESK.CONTACT_YAW, t2);
     }
   }
+  out.setupYaw = yaw;
 
-  if (travel >= 1) rotY = seatedRotY;
-  out.rotationY = rotY;
+  // --- 6. Orientación del personaje: gira hacia la mesa en los últimos pasos
+  //        y, ya sentado, acompaña al giro del conjunto (mueble incluido).
+  const turnFactor = smoothstep(1 - DESK.TURN_WINDOW, 1, walkT);
+  out.rotationY = THREE.MathUtils.lerp(DESK.ENTER_ROT_Y, DESK.SEAT_ROT_Y + yaw, turnFactor);
 
   // --- 7. Cámara: releva a la de la fase 1 durante la caminata, se instala
   //        del todo en la ruta de anclas en cuanto se sienta. -------------

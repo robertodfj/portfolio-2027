@@ -106,9 +106,15 @@ export class AnimationService {
     );
     this.scene.scene.add(this.particles);
 
-    this.deskGroup = buildDeskSetup();
-    this.deskGroup.position.copy(DESK.DESK_GROUP_POSITION);
-    this.deskGroup.rotation.y = DESK.DESK_GROUP_ROTATION_Y;
+    // El mueble se monta EXACTAMENTE sobre el asiento (misma posición, misma
+    // escala; la rotación la refresca cada frame `apply`, porque gira con las
+    // secciones). Así silla, mesa y portátil viven en el espacio local del
+    // propio personaje y no pueden descolocarse respecto a su pose — ver el
+    // cabecero de buildDeskSetup.
+    this.deskGroup = buildDeskSetup(this.scene.renderer);
+    this.deskGroup.position.copy(DESK.SEAT);
+    this.deskGroup.scale.setScalar(DESK.SCENE_SCALE);
+    this.deskGroup.rotation.y = DESK.SEAT_ROT_Y;
     this.deskGroup.visible = false;
     this.scene.scene.add(this.deskGroup);
 
@@ -230,14 +236,24 @@ export class AnimationService {
     this.deskContext.contactTop = this.scroll.sectionRange(CONTACT_SECTION)?.top ?? 0;
     const d = evaluateDesk(progress, this.deskContext, s.cameraPosition, s.cameraLookAt, this.deskSample);
 
-    if (this.deskGroup) this.deskGroup.visible = d.active;
+    if (this.deskGroup) {
+      this.deskGroup.visible = d.active;
+      // Gira con el conjunto: el personaje aplica este mismo giro sobre su
+      // propia orientación, y ambos pivotan sobre el mismo punto (SEAT), así
+      // que se mueven rígidos y la pose sigue encajando con el mueble.
+      this.deskGroup.rotation.y = DESK.SEAT_ROT_Y + d.setupYaw;
+    }
 
     if (this.character) {
       if (d.active) {
         // Fase escritorio: gobierna ella, no la fase 1 — mismo personaje,
-        // reutilizado en vez de una segunda instancia del GLB.
+        // reutilizado en vez de una segunda instancia del GLB. Escala propia
+        // (DESK.SCENE_SCALE): el punto de partida está fuera de cuadro en
+        // las dos cámaras, así que el salto de tamaño respecto a la fase 1
+        // nunca llega a verse.
         this.character.root.position.copy(d.position);
         this.character.root.rotation.y = d.rotationY;
+        this.character.root.scale.setScalar(d.scale);
 
         this.layers[0].weight = 0;
         this.layers[1].weight = d.walkBlend;
@@ -246,6 +262,7 @@ export class AnimationService {
       } else {
         this.character.root.position.copy(s.position);
         this.character.root.rotation.y = s.rotationY;
+        this.character.root.scale.setScalar(1);
 
         this.layers[0].weight = this.idleAvailable ? 1 - s.walkBlend : 0;
         this.layers[1].weight = this.idleAvailable ? s.walkBlend : 1;
@@ -260,10 +277,16 @@ export class AnimationService {
     // posición) conserva el encuadre que decidió el timeline.
     const camPos = d.active ? d.cameraPosition : s.cameraPosition;
     const camLook = d.active ? d.cameraLookAt : s.cameraLookAt;
-    this.cameraSvc.lookTarget.copy(camLook);
+    // En móvil el texto ocupa todo el ancho, así que la escena de escritorio
+    // se corre hacia el borde derecho para no taparlo (ver MOBILE_CAMERA_SHIFT_X).
+    const shiftX = d.active && this.scene.mobile ? DESK.MOBILE_CAMERA_SHIFT_X : 0;
+    this.cameraSvc.lookTarget.set(camLook.x + shiftX, camLook.y, camLook.z);
     this.cameraSvc.camera.position
-      .copy(camLook)
-      .addScaledVector(this.camOffset.subVectors(camPos, camLook), this.cameraSvc.distanceScale);
+      .copy(this.cameraSvc.lookTarget)
+      .addScaledVector(
+        this.camOffset.set(camPos.x - camLook.x, camPos.y - camLook.y, camPos.z - camLook.z),
+        this.cameraSvc.distanceScale,
+      );
   }
 
   private warnAboutMissingClips(character: CharacterController): void {

@@ -521,58 +521,136 @@ export const DESK = {
    * cuadro en la fase 1. Cae claramente después de EXIT_LEAD_VH de la moto
    * (70vh), para que no se crucen: la moto ya se ha ido cuando esto arranca.
    */
-  ENTER_LEAD_VH: 55,
+  ENTER_LEAD_VH: 65,
 
-  /** Duración (en vh) de "caminar hasta la silla + sentarse". */
-  ENTER_SPAN_VH: 65,
+  /**
+   * Duración (en vh) de "caminar hasta la silla + sentarse". Subida junto con
+   * la distancia (WALK_START <-> SEAT, ver abajo) a petición explícita
+   * ("que camine más") — más lejos en más scroll, para que la cadencia de
+   * zancada (que depende de la distancia real, no de este número — ver
+   * WALK.CYCLE_DISTANCE) no se acelere de forma antinatural.
+   */
+  ENTER_SPAN_VH: 90,
 
   /**
    * Punto de partida, en mundo. Independiente de dónde acabó la fase 1 (esta
    * fase vive bajo su PROPIA cámara, que ya no es la fija heredada de
    * caminar): basta con que quede fuera del encuadre de CAMERA_POSITION, para
    * que el personaje entre desde el borde igual que en la fase 1.
+   *
+   * Alejado de SEAT (antes -3.5 con SEAT.x=1.2, un recorrido de 4.7u; ahora
+   * 6.9u) a petición explícita de que camine más antes de llegar.
    */
-  WALK_START: new THREE.Vector3(-3.5, WALK.BASE_Y, -0.1),
+  WALK_START: new THREE.Vector3(-4.6, WALK.BASE_Y, -0.1),
 
-  /** Punto de llegada (sentado) y orientación de cara a la mesa. */
-  SEAT: new THREE.Vector3(1.2, WALK.BASE_Y, -0.1),
+  /**
+   * Punto de llegada. Es el ORIGEN de toda la escena de escritorio: el grupo
+   * de mueble se coloca exactamente aquí, con esta misma rotación y esta
+   * misma escala (ver AnimationService.placeDeskGroup y el cabecero de
+   * buildDeskSetup), así que silla, mesa y portátil están construidos en el
+   * espacio local del PROPIO personaje y no pueden descolocarse respecto a
+   * él. Movido más a la derecha (antes 1.2) a petición explícita — claramente
+   * más allá de la columna de texto de "experiencia.log" (max-width 44rem).
+   */
+  SEAT: new THREE.Vector3(2.3, WALK.BASE_Y, -0.1),
   /** Mirando de frente mientras camina hacia +X (misma convención que WALK_ROT_Y, en sentido contrario). */
   ENTER_ROT_Y: Math.PI / 2,
-  /** Gira hacia la mesa/monitor en los últimos pasos, no de perfil total: sigue leyéndose de cara a cámara. */
-  SEAT_ROT_Y: -0.35,
+  /**
+   * Orientación sentado. A 0 miraría de frente a cámara y la mesa —que está
+   * delante de él, en su +Z— le taparía medio cuerpo. Girado ~31° queda en
+   * tres cuartos: se le ve la cara, la mesa se va hacia la derecha del cuadro
+   * y el respaldo de la silla le enmarca la silueta.
+   */
+  SEAT_ROT_Y: 0.55,
   /** Fracción final del recorrido (0-1) en la que ocurre el giro de llegada. Más corta que TURN_IN de la fase 1: aquí el giro remata el paso, no lo abre. */
-  TURN_WINDOW: 0.25,
-
-  /** Última fracción del recorrido en la que Walking cede peso a Typing — el "sentarse" es este fundido, no una pose cinemática literal. */
-  SIT_BLEND: 0.3,
-
-  /** Fracción del recorrido en la que la cámara termina de pasar de la vista fija de la fase 1 a CAMERA_POSITION/LOOK_AT. */
-  CAMERA_BLEND: 0.5,
+  TURN_WINDOW: 0.35,
 
   /**
-   * Transform propio del grupo escritorio+silla+MacBook — deliberadamente
-   * SEPARADO de SEAT: alinear "dónde se sienta" con "dónde está la silla" es
-   * un ajuste visual (mover una malla unos centímetros), no debería obligar a
-   * re-derivar la cinemática de la caminata. Se tocan por separado.
+   * Última fracción del recorrido reservada a sentarse. El desplazamiento
+   * termina ANTES que la ventana completa (ver evaluateDesk): llega a la
+   * silla, se para, y solo entonces funde Walking -> Typing. Si el fundido
+   * corriese a la vez que el desplazamiento se le vería entrar deslizándose
+   * ya sentado.
    */
-  DESK_GROUP_POSITION: new THREE.Vector3(1.55, 0, -0.55),
-  DESK_GROUP_ROTATION_Y: -0.35,
+  SIT_BLEND: 0.22,
 
   /**
-   * Ruta de cámara de 3 anclas, sección a sección. Cada ancla es
-   * POSITION + LOOK_AT (mismo par que CAMERA.POSITION/LOOK_AT de la fase 1) y,
-   * además, la orientación del personaje en ese punto — el "gira y se pone de
-   * otro lado" pedido explícitamente, con el mismo mecanismo que ya mueve la
-   * cámara: nada de tiempo, solo `progress`.
+   * Fracción del recorrido en la que la cámara termina de pasar de la vista
+   * fija de la fase 1 a CAMERA_POSITION/LOOK_AT. Alta a propósito: la cámara
+   * se va cerrando MIENTRAS él cruza el cuadro y solo se asienta al llegar,
+   * que es lo que hace que se lea como "le acompaña hasta su sitio" en vez de
+   * saltar al encuadre final con él todavía a medio camino.
    */
-  CAMERA_POSITION: new THREE.Vector3(1.0, 1.5, 4.3),
-  CAMERA_LOOK_AT: new THREE.Vector3(1.15, 1.05, -0.1),
+  CAMERA_BLEND: 0.9,
 
-  TECH_CAMERA_POSITION: new THREE.Vector3(0.5, 1.6, 5.1),
-  TECH_CAMERA_LOOK_AT: new THREE.Vector3(0.75, 1.1, -0.15),
-  TECH_ROT_Y: 0.15,
+  /**
+   * Escala del personaje SOLO en esta fase (root.scale, aplicada por
+   * AnimationService mientras `active`). A petición explícita ("más
+   * grande"). Se fija de golpe en cuanto arranca la caminata, sin rampa: el
+   * punto de partida está fuera de cuadro en las DOS cámaras (la fija
+   * heredada de la fase 1 y esta), así que el cambio de tamaño no se ve
+   * nunca ocurrir — no hace falta blend.
+   */
+  SCENE_SCALE: 1.3,
 
-  CONTACT_CAMERA_POSITION: new THREE.Vector3(0.9, 1.7, 5.6),
-  CONTACT_CAMERA_LOOK_AT: new THREE.Vector3(1.0, 1.15, -0.1),
-  CONTACT_ROT_Y: -0.55,
+  /**
+   * Ruta de cámara de 3 anclas, sección a sección: POSITION + LOOK_AT (mismo
+   * par que CAMERA.POSITION/LOOK_AT de la fase 1) y un giro del CONJUNTO —
+   * el "gira y se pone de otro lado" pedido explícitamente. Todo función de
+   * `progress`, nada de tiempo, así que se deshace igual al subir.
+   *
+   * Las alturas apuntan al pecho/portátil: sentado, sus hombros caen en
+   * y≈1.31 de mundo y el tablero en y≈0.96 (0.735 locales x SCENE_SCALE).
+   */
+  /**
+   * LLEGADA. El encuadre tiene que caber con él DE PIE (cabeza en y≈2.34 de
+   * mundo), no solo sentado (y≈1.56): justo antes de sentarse sigue de pie, y
+   * un encuadre ajustado al sentado le cortaba la cabeza durante todo ese
+   * tramo. De ahí la distancia. Además la cámara apunta a la IZQUIERDA de él
+   * (look_at.x < SEAT.x) para dejarlo a la derecha del cuadro, fuera de la
+   * columna de texto.
+   */
+  CAMERA_POSITION: new THREE.Vector3(1.55, 1.75, 4.25),
+  CAMERA_LOOK_AT: new THREE.Vector3(1.85, 1.45, 0.2),
+
+  /**
+   * TECNOLOGÍAS. La parrilla ocupa la franja central de la pantalla de lado a
+   * lado (de ~42% a ~64% de alto), así que aquí la cámara se aleja Y mira
+   * ALTO —look_at bastante por encima de su cabeza— para que toda la escena
+   * caiga por debajo de la tabla. Con el encuadre anterior le quedaba la
+   * cabeza justo detrás de la última fila.
+   *
+   * Los números salen de la cuenta, no del ojo: a esta distancia se ven
+   * ~4.1 unidades de alto, con el borde superior en y≈4.37, así que su cabeza
+   * (y=1.556 de mundo, sentado) cae al 68% de la pantalla — por debajo del
+   * 64% donde termina la parrilla.
+   */
+  TECH_CAMERA_POSITION: new THREE.Vector3(1.75, 2.4, 6.3),
+  TECH_CAMERA_LOOK_AT: new THREE.Vector3(2.3, 2.3, 0.2),
+
+  /**
+   * CONTACTO. Vuelve a bajar y se acerca. Apunta claramente a la izquierda de
+   * él (look_at.x muy por debajo de SEAT.x = 2.3) para empujar la escena a la
+   * derecha y dejarle sitio al titular "¿Tienes un proyecto en mente?".
+   */
+  CONTACT_CAMERA_POSITION: new THREE.Vector3(1.6, 1.65, 4.5),
+  CONTACT_CAMERA_LOOK_AT: new THREE.Vector3(1.8, 1.2, 0.15),
+
+  /**
+   * Giro EXTRA del conjunto entero (personaje + mueble, rígidos) al pasar por
+   * cada sección, en radianes sobre SEAT_ROT_Y. Tiene que girar el conjunto y
+   * no solo al personaje: girándolo a él suelto, las manos se salían del
+   * teclado y la espalda atravesaba el respaldo.
+   */
+  TECH_YAW: -0.18,
+  CONTACT_YAW: 0.26,
+
+  /**
+   * Desplazamiento lateral de la cámara SOLO en móvil. Ahí el texto ocupa todo
+   * el ancho (no hay columna a la izquierda que dejar libre), así que la
+   * escena se le monta encima. Restando esto a la X de la cámara y del punto
+   * al que mira, el conjunto se va hacia el borde derecho y el texto se lee
+   * limpio, sin tocar el encuadre de escritorio.
+   */
+  MOBILE_CAMERA_SHIFT_X: -0.45,
 } as const;

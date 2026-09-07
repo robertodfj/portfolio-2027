@@ -1,9 +1,21 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, effect, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
+  ViewChild,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { LanguageService } from './shared/language.service';
 import { ThemeService } from './shared/theme.service';
-import { ThreeSceneService } from './three/three-scene.service';
+import { AccentService } from './shared/accent.service';
+import { ThreeSceneService, WebGLUnavailableError } from './three/three-scene.service';
 import { CameraService } from './three/camera.service';
 import { ModelLoaderService } from './three/model-loader.service';
 import { AnimationService } from './three/animation.service';
@@ -18,18 +30,18 @@ import { ContactComponent } from './components/contact/contact.component';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
-    TranslateModule,
-    NavbarComponent,
-    LoadingScreenComponent,
-    HeroComponent,
-    AboutComponent,
-    ExperienceComponent,
-    TechnologiesComponent,
-    ProjectsComponent,
-    ContactComponent,
+      CommonModule,
+      TranslateModule,
+      NavbarComponent,
+      LoadingScreenComponent,
+      HeroComponent,
+      AboutComponent,
+      ExperienceComponent,
+      TechnologiesComponent,
+      ProjectsComponent,
+      ContactComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -37,9 +49,14 @@ import { ContactComponent } from './components/contact/contact.component';
 export class AppComponent implements AfterViewInit, OnDestroy {
   @ViewChild('sceneCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
 
+  private readonly zone = inject(NgZone);
+  private readonly accent = inject(AccentService);
+
   readonly loading = signal(true);
   readonly usingPlaceholder = signal(false);
   readonly showScrollTop = signal(false);
+  /** El navegador no puede pintar la escena: se avisa en vez de fallar en silencio. */
+  readonly sceneUnavailable = signal(false);
 
   constructor(
     private sceneSvc: ThreeSceneService,
@@ -49,48 +66,72 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     private language: LanguageService,
     private theme: ThemeService,
   ) {
-    // Antes del primer render: así no se ve un parpadeo de idioma o de tema.
+    // Antes del primer render: así no parpadea ni el idioma ni el tema.
     this.language.init();
     this.theme.init();
 
-    // La escena 3D no ve el CSS — hay que pasarle el tema a mano. El effect
-    // se dispara también en el arranque, así que cubre el estado inicial.
+    // La escena 3D no ve el CSS, hay que pasarle tema y acento a mano.
     effect(() => {
       const theme = this.theme.current();
-      this.sceneSvc.applyTheme(theme); // niebla y suelo
-      this.animationSvc.applyTheme(theme); // partículas
+      this.sceneSvc.applyTheme(theme);
+      this.animationSvc.applyTheme(theme);
     });
+
+    effect(() => this.sceneSvc.setAccent(this.accent.accentHex()));
   }
 
   async ngAfterViewInit(): Promise<void> {
-    this.sceneSvc.mount(this.canvasRef.nativeElement);
+    try {
+      this.sceneSvc.mount(this.canvasRef.nativeElement);
+    } catch (err) {
+      if (err instanceof WebGLUnavailableError) {
+        this.sceneUnavailable.set(true);
+        this.loading.set(false);
+        return;
+      }
+      throw err;
+    }
 
     const character = await this.modelLoader.loadCharacter();
     this.usingPlaceholder.set(character.usingPlaceholder);
 
-    // Un único tick por frame: AnimationService lo registra y desde ahí
-    // orquesta scroll -> timeline -> personaje -> cámara, en ese orden.
+    // Un único tick por frame: AnimationService orquesta desde ahí
+    // scroll -> timeline -> personaje -> cámara, en ese orden.
     this.animationSvc.init(character, document.body);
     this.sceneSvc.startLoop(this.cameraSvc.camera);
 
-    // Small delay so the "LOADING EXPERIENCE" moment reads intentionally
-    // rather than flashing away instantly on fast connections.
+    // Pequeño margen para que el "LOADING" se lea a propósito y no como un
+    // parpadeo en conexiones rápidas.
     window.setTimeout(() => this.loading.set(false), 600);
 
-    window.addEventListener('scroll', this.onScroll, { passive: true });
-    window.addEventListener('load', () => this.animationSvc.refresh());
+    // Fuera de la zona: el scroll dispara cientos de eventos por segundo y no
+    // hace falta un ciclo de detección de cambios por cada uno.
+    this.zone.runOutsideAngular(() => {
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+    });
+
+    // Si el documento ya había cargado, el evento no volverá a dispararse.
+    if (document.readyState === 'complete') this.animationSvc.refresh();
+    else window.addEventListener('load', this.onLoad, { once: true });
   }
 
   scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  private onLoad = (): void => this.animationSvc.refresh();
+
   private onScroll = (): void => {
-    this.showScrollTop.set(window.scrollY > window.innerHeight * 0.6);
+    const visible = window.scrollY > window.innerHeight * 0.6;
+    if (visible === this.showScrollTop()) return;
+    // El signal se escribe fuera de la zona, así que hay que volver a entrar
+    // para que la vista se entere.
+    this.zone.run(() => this.showScrollTop.set(visible));
   };
 
   ngOnDestroy(): void {
     window.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('load', this.onLoad);
     this.animationSvc.dispose();
   }
 }

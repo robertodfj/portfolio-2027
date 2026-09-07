@@ -4,6 +4,15 @@
   <p class="about__lead" data-reveal>{{ 'about.lead1' | translate }}</p>
   <p class="about__lead" data-reveal>{{ 'about.lead2' | translate }}</p>
 
+  <p
+    class="about__bike-hint"
+    [class.about__bike-hint--gone]="hints.bikeFound()"
+    aria-hidden="true"
+  >
+    <span class="about__bike-hint-dot"></span>
+    {{ 'about.bikeHint' | translate }}
+  </p>
+
   <ul class="about__traits">
     <li class="trait-card" data-reveal *ngFor="let t of traits">
       <span class="trait-card__sheen" aria-hidden="true"></span>

@@ -5,18 +5,48 @@
   </h2>
   <p class="contact__lead" data-reveal>{{ 'contact.lead' | translate }}</p>
 
+  <div class="terminal" data-reveal>
+    <div class="terminal__bar" aria-hidden="true">
+      <span></span><span></span><span></span>
+      <em>roberto&#64;portfolio</em>
+    </div>
+
+    <div class="terminal__output" aria-live="polite">
+      <p *ngFor="let line of lines()" [class.terminal__echo]="line.echo">
+        <span *ngIf="line.echo" aria-hidden="true">$&nbsp;</span>{{ line.key ? (line.key | translate: line.params) : line.text }}
+      </p>
+    </div>
+
+    <form class="terminal__form" (ngSubmit)="submit()">
+      <label class="visually-hidden" for="terminal-input">
+        {{ 'contact.terminal.label' | translate }}
+      </label>
+      <span class="terminal__prompt" aria-hidden="true">$</span>
+      <input
+        id="terminal-input"
+        class="terminal__input"
+        name="command"
+        autocomplete="off"
+        spellcheck="false"
+        [attr.placeholder]="'contact.terminal.placeholder' | translate"
+        [ngModel]="command()"
+        (ngModelChange)="command.set($event)"
+      />
+    </form>
+  </div>
+
   <a class="btn btn--solid contact__cta" data-reveal [href]="'mailto:' + email">
     {{ 'contact.cta' | translate }}
   </a>
 
   <div class="contact__links" data-reveal>
-    <a [href]="githubUrl" target="_blank" rel="noopener">GitHub</a>
-    <a [href]="linkedinUrl" target="_blank" rel="noopener">LinkedIn</a>
+    <a [href]="githubUrl" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <a [href]="linkedinUrl" target="_blank" rel="noopener noreferrer">LinkedIn</a>
     <a [href]="'mailto:' + email">{{ email }}</a>
   </div>
 
   <footer class="contact__footer" data-reveal>
-    <span>Roberto de Frutos Jiménez — {{ 2026 }}</span>
+    <span>Roberto de Frutos Jiménez — {{ year }}</span>
     <span>Angular · Three.js · GSAP</span>
   </footer>
 </section>

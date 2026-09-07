@@ -7,8 +7,16 @@
   flex-direction: column;
   justify-content: center;
 
+  &__hint {
+    margin-top: 1.25rem;
+    max-width: 40ch;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-dim);
+  }
+
   &__grid {
-    margin-top: 3rem;
+    margin-top: 2rem;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1px;
@@ -17,6 +25,7 @@
   }
 
   &__item {
+    position: relative;
     background: var(--surface-dim);
     backdrop-filter: blur(6px);
     border: none;
@@ -27,11 +36,27 @@
     flex-direction: column;
     gap: 0.35rem;
     min-height: 6.5rem;
+    color: inherit;
     transition: background 0.3s var(--easing), transform 0.3s var(--easing);
 
     &--active {
       background: rgba(var(--accent-rgb), 0.06);
       transform: translateY(-3px);
+    }
+
+    /* Elegida: manda en la escena, así que se marca de forma permanente. */
+    &--selected {
+      background: rgba(var(--accent-rgb), 0.12);
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--accent);
+      }
     }
   }
 
@@ -41,7 +66,8 @@
     font-size: 1rem;
     color: var(--ink);
     transition: color 0.25s;
-    .tech__item--active & { color: var(--ember); }
+    .tech__item--active &,
+    .tech__item--selected & { color: var(--ember); }
   }
 
   &__note {

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import * as THREE from 'three';
 import { CAMERA } from './narrative.config';
 
@@ -15,7 +15,7 @@ import { CAMERA } from './narrative.config';
  * solo al redimensionar.
  */
 @Injectable({ providedIn: 'root' })
-export class CameraService {
+export class CameraService implements OnDestroy {
   readonly camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
   readonly lookTarget = new THREE.Vector3(0, 0.9, 0);
 
@@ -68,4 +68,8 @@ export class CameraService {
     this.camera.updateProjectionMatrix();
     this.updateDistanceScale();
   };
+
+  ngOnDestroy(): void {
+    window.removeEventListener('resize', this.onResize);
+  }
 }

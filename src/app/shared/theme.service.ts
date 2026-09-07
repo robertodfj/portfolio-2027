@@ -5,16 +5,12 @@ export type Theme = 'dark' | 'light';
 const STORAGE_KEY = 'portfolio.theme';
 
 /**
- * Tema claro/oscuro.
+ * Tema claro/oscuro. Arranca siempre en oscuro y no mira
+ * `prefers-color-scheme`: el oscuro es el aspecto para el que está iluminada
+ * la escena 3D. Solo se respeta lo que el visitante haya elegido antes.
  *
- * Arranca SIEMPRE en oscuro a petición explícita — no se mira
- * `prefers-color-scheme`: el oscuro es el aspecto para el que está diseñada
- * la escena 3D y con el que debe recibir a quien entra. Solo se respeta lo
- * que el propio visitante haya elegido antes.
- *
- * El tema se publica de dos formas porque tiene dos consumidores muy
- * distintos: un atributo `data-theme` en <html> para el CSS, y un signal para
- * que la escena de Three.js (que no ve el CSS) pueda repintar niebla y suelo.
+ * Se publica de dos formas porque tiene dos consumidores: un data-theme en
+ * <html> para el CSS y un signal para la escena 3D, que no ve el CSS.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {

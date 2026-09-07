@@ -7,9 +7,9 @@
     "contact": "Contacto",
     "cta": "Contactar",
     "aria": "Navegación principal",
-    "openMenu": "Abrir menú"
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
   },
-
   "hero": {
     "eyebrow": "portfolio.init()",
     "available": "OPEN TO WORK",
@@ -18,7 +18,6 @@
     "scroll": "scroll",
     "languageLabel": "Selecciona el idioma"
   },
-
   "about": {
     "eyebrow": "sobre-mi.md",
     "title": "Más allá del código",
@@ -41,9 +40,9 @@
         "title": "Las motos",
         "detail": "Mi mayor pasión y donde busco los retos que no están en un teclado."
       }
-    }
+    },
+    "bikeHint": "Pasa el ratón por la moto"
   },
-
   "experience": {
     "eyebrow": "experiencia.log",
     "title": "En qué he estado trabajando",
@@ -80,10 +79,10 @@
       }
     }
   },
-
   "tech": {
     "eyebrow": "stack.json",
     "title": "Con qué trabajo",
+    "hint": "Pulsa una para teñir la escena con su color y ver su código en pantalla.",
     "notes": {
       "java": "Backend principal",
       "spring": "APIs y servicios",
@@ -101,7 +100,6 @@
       "docker": "Entornos reproducibles"
     }
   },
-
   "projects": {
     "eyebrow": "proyectos/",
     "title": "Cosas que he construido",
@@ -139,20 +137,26 @@
       }
     }
   },
-
   "contact": {
     "eyebrow": "contacto.send()",
     "titleLine1": "¿Tienes un proyecto",
     "titleLine2": "en mente?",
     "lead": "Estoy buscando mi siguiente reto como desarrollador Full Stack. Hablemos.",
-    "cta": "Contactar ↗"
+    "cta": "Contactar ↗",
+    "terminal": {
+      "label": "Escribe un comando",
+      "placeholder": "escribe 'help' y pulsa Enter",
+      "welcome": "Bienvenido. Escribe 'help' para ver los comandos disponibles.",
+      "help": "Comandos: email · github · linkedin · whoami · clear",
+      "whoami": "Roberto de Frutos Jiménez — desarrollador Full Stack orientado a backend Java.",
+      "unknown": "Comando no reconocido: {{command}}. Prueba con 'help'."
+    }
   },
-
   "loading": "LOADING EXPERIENCE",
-
   "a11y": {
     "scrollTop": "Volver arriba",
     "placeholderModel": "Modelo 3D placeholder activo — sustituye src/assets/models/roberto.glb por el modelo definitivo.",
+    "noWebgl": "Tu navegador no puede mostrar la escena 3D, pero todo el contenido sigue disponible.",
     "toLight": "Cambiar a modo claro",
     "toDark": "Cambiar a modo oscuro",
     "langEs": "Cambiar el idioma a español",

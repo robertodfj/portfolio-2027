@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, effect, inject } from '@angular/core';
 import * as THREE from 'three';
 import { CameraService } from './camera.service';
 import { AnimationLayer, CharacterController, ModelLoaderService } from './model-loader.service';
@@ -17,56 +17,54 @@ import {
 } from './character-timeline';
 import { MotorbikeProp } from './motorbike-prop';
 import { buildMotorcycleRider } from './motorcycle-rider';
-import { buildDeskSetup } from './desk-setup';
+import { buildDeskSetup, DeskSetup } from './desk-setup';
 import { buildParticleField } from './scene-props';
 import { PointerInteractionService } from './pointer-interaction.service';
 import { AMBIENT, DESK, MOTORBIKE, RIDER } from './narrative.config';
+import { AccentService } from '../shared/accent.service';
+import { SceneHintsService } from '../shared/scene-hints.service';
+import { DEFAULT_CODE } from '../shared/tech-catalog';
+import { hexToCss, prefersReducedMotion } from '../shared/browser.util';
 
-/** Clave con la que se sigue el tramo de "Más allá del código". */
 const ABOUT_SECTION = 'about';
-/** Clave con la que se sigue el tramo de "experiencia.log" — de aquí cuelgan la salida de la moto y la llegada a la mesa. */
+/** De #experience cuelgan la salida de la moto y la llegada a la mesa. */
 const EXPERIENCE_SECTION = 'experience';
-/** Claves de las dos secciones siguientes: 2ª y 3ª ancla de la ruta de cámara del escritorio. */
+/** Anclas 2ª y 3ª de la ruta de cámara del escritorio. */
 const TECH_SECTION = 'technologies';
 const CONTACT_SECTION = 'contact';
 
 /**
- * Orquestador del narrativo. Es la única pieza que conoce a la vez el scroll,
- * el timeline y la escena; el resto son módulos que no saben unos de otros.
+ * Orquestador del narrativo: la única pieza que conoce a la vez el scroll, el
+ * timeline y la escena.
  *
- *   ScrollProgressService  ->  scrollProgress ∈ [0,1]
- *   character-timeline     ->  blend / fase de clip / posición / cámara
- *   CharacterController    ->  pesos y cabezales del AnimationMixer
- *   ThreeSceneService      ->  render loop (un único requestAnimationFrame)
- *
- * FASE 1 implementada: Idle -> caminar hacia la izquierda -> Idle, íntegramente
- * scrubbed por scroll y perfectamente reversible. Las etapas posteriores
- * (escritorio, typing, moto, proyectos, contacto) todavía no existen.
+ *   ScrollProgressService  ->  progress ∈ [0,1]
+ *   character-timeline     ->  mezcla, posición y cámara (funciones puras)
+ *   CharacterController    ->  pesos del AnimationMixer
+ *   ThreeSceneService      ->  un único requestAnimationFrame
  */
 @Injectable({ providedIn: 'root' })
 export class AnimationService {
+  private readonly pointer = inject(PointerInteractionService);
+  private readonly accent = inject(AccentService);
+  private readonly hints = inject(SceneHintsService);
+
   private character?: CharacterController;
   private particles?: THREE.Points;
   private motorbike?: MotorbikeProp;
-  private deskGroup?: THREE.Group;
+  private desk?: DeskSetup;
 
   /**
-   * Sin clip de reposo no hay nada con lo que mezclar: la suma de pesos
-   * caería a 0 y el mixer devolvería la bind pose (T-pose). Mientras falte
-   * el Idle, Walking se queda a peso 1 y su primer fotograma hace de reposo.
-   * En cuanto el GLB traiga un Idle, esto se desactiva solo.
+   * Sin clip de reposo la suma de pesos caería a 0 y el mixer devolvería la
+   * T-pose. Si falta el Idle, Walking se queda a peso 1 y su primer fotograma
+   * hace de reposo.
    */
   private idleAvailable = true;
 
-  /** Muestra reutilizada cada frame — cero asignaciones en el bucle. */
+  /** Muestras reutilizadas cada frame: cero asignaciones en el bucle. */
   private readonly sample: TimelineSample = createTimelineSample();
-  /** Muestra de la fase "escritorio", igual de reutilizada. */
   private readonly deskSample: DeskSample = createDeskSample();
-  /** Vector de trabajo para el offset de cámara, también reutilizado. */
   private readonly camOffset = new THREE.Vector3();
-  /** Contexto medido (layout + encuadre) que el timeline necesita. Reutilizado. */
   private readonly context: TimelineContext = { aboutTop: 0, visibleHalfWidth: 0 };
-  /** Contexto medido de la fase "escritorio". Reutilizado. */
   private readonly deskContext: DeskContext = {
     sectionTop: 0,
     enterLeadProgress: 0,
@@ -74,21 +72,24 @@ export class AnimationService {
     techTop: 0,
     contactTop: 0,
   };
-  /** Para no escribir document.body.style.cursor cuando no ha cambiado. */
-  private cursorIsPointer = false;
-  /** Tema pedido, para poder aplicarlo aunque llegue antes que la escena. */
-  private themeName: 'dark' | 'light' = 'dark';
 
+  /** Vectores de trabajo del brillo de la tira LED. */
+  private readonly ledWorld = new THREE.Vector3();
+
+  private cursorIsPointer = false;
+  private themeName: 'dark' | 'light' = 'dark';
   /**
-   * Array de capas estable: se muta in situ, nunca se recrea, y el
-   * CharacterController tampoco recrea acciones a partir de él.
-   * Idle corre libre (sin `phase`); Walking va scrubbed por el scroll.
+   * Movimiento reducido pedido por el sistema. Solo apaga lo que se mueve SOLO
+   * —giro de la moto, deriva de las partículas, parpadeo de la pantalla—, que
+   * es lo que provoca mareo. El recorrido por scroll se mantiene: lo controla
+   * el usuario con su propio gesto, y es el contenido de la página.
    */
+  private readonly reduced = prefersReducedMotion();
+
   private readonly layers: AnimationLayer[] = [
     { state: 'Idle', weight: 1 },
     { state: 'Walking', weight: 0, phase: 0 },
-    // Sin `phase`: corre libre con el reloj, igual que Idle — una vez
-    // sentado se queda escribiendo indefinidamente mientras dure el scroll.
+    // Sin `phase`: corre libre con el reloj, como el Idle.
     { state: 'Typing', weight: 0 },
   ];
 
@@ -97,8 +98,18 @@ export class AnimationService {
     private cameraSvc: CameraService,
     private scroll: ScrollProgressService,
     private modelLoader: ModelLoaderService,
-    private pointer: PointerInteractionService,
-  ) {}
+  ) {
+    // Elegir una tecnología retiñe la escena y cambia el código de la pantalla.
+    effect(() => {
+      const hex = this.accent.accentHex();
+      const tech = this.accent.selectedTech();
+
+      this.desk?.setAccent(hex);
+      this.desk?.screen.setAccent(hexToCss(hex));
+      this.desk?.screen.setCode(tech?.code ?? DEFAULT_CODE);
+      this.applyParticleColor();
+    });
+  }
 
   init(character: CharacterController, scrollHost: HTMLElement): void {
     this.character = character;
@@ -107,20 +118,20 @@ export class AnimationService {
     this.particles = buildParticleField(
       this.scene.mobile ? AMBIENT.PARTICLES_MOBILE : AMBIENT.PARTICLES_DESKTOP,
     );
-    this.applyTheme(this.themeName);
+    this.applyParticleColor();
     this.scene.scene.add(this.particles);
 
-    // El mueble se monta EXACTAMENTE sobre el asiento (misma posición, misma
-    // escala; la rotación la refresca cada frame `apply`, porque gira con las
-    // secciones). Así silla, mesa y portátil viven en el espacio local del
-    // propio personaje y no pueden descolocarse respecto a su pose — ver el
-    // cabecero de buildDeskSetup.
-    this.deskGroup = buildDeskSetup(this.scene.renderer);
-    this.deskGroup.position.copy(DESK.SEAT);
-    this.deskGroup.scale.setScalar(DESK.SCENE_SCALE);
-    this.deskGroup.rotation.y = DESK.SEAT_ROT_Y;
-    this.deskGroup.visible = false;
-    this.scene.scene.add(this.deskGroup);
+    // El mueble se monta exactamente sobre el asiento, en el espacio local del
+    // personaje, para que no puedan descolocarse entre sí.
+    this.desk = buildDeskSetup(this.scene.renderer);
+    this.desk.group.position.copy(DESK.SEAT);
+    this.desk.group.scale.setScalar(DESK.SCENE_SCALE);
+    this.desk.group.rotation.y = DESK.SEAT_ROT_Y;
+    this.desk.group.visible = false;
+    this.desk.screen.setCode(DEFAULT_CODE);
+    this.desk.screen.setAccent(hexToCss(this.accent.accentHex()));
+    this.desk.setAccent(this.accent.accentHex());
+    this.scene.scene.add(this.desk.group);
 
     this.idleAvailable = character.availableStates.has('Idle');
     this.warnAboutMissingClips(character);
@@ -132,12 +143,12 @@ export class AnimationService {
     this.scroll.trackSection(CONTACT_SECTION, DESK.CONTACT_SECTION_SELECTOR);
     this.scene.onUpdate(this.tick);
 
-    // La moto pesa ~2 MB con 46 texturas: se carga aparte para no retrasar la
-    // entrada a la escena, y aparece cuando esté lista.
-    void this.loadMotorbike();
+    // La moto va aparte para no retrasar la entrada a la escena.
+    this.loadMotorbike().catch((err) => {
+      console.warn('[AnimationService] La moto no pudo montarse.', err);
+    });
 
-    // Primer frame determinista: el personaje ya está colocado y en Idle antes
-    // de que el render loop arranque, así que no hay salto inicial.
+    // Primer frame determinista: nada de salto inicial.
     this.apply(this.scroll.raw);
   }
 
@@ -145,79 +156,96 @@ export class AnimationService {
     this.scroll.refresh();
   }
 
-  /**
-   * El campo de partículas es lo único de esta clase que depende del tema.
-   * En oscuro son puntos de acento que brillan sobre el negro; en claro ese
-   * mismo índigo al 50% sobre un fondo casi blanco se lee como motas de
-   * suciedad, así que se oscurecen y se bajan de opacidad hasta quedar en
-   * textura de fondo.
-   */
   applyTheme(theme: 'dark' | 'light'): void {
-    // Igual que en ThreeSceneService: el tema puede pedirse antes de que
-    // exista el campo de partículas, así que se anota y se reaplica en init().
     this.themeName = theme;
-    const material = this.particles?.material as THREE.PointsMaterial | undefined;
-    if (!material) return;
-    material.color.setHex(theme === 'dark' ? 0x6e7bff : 0x2b3080);
-    material.opacity = theme === 'dark' ? 0.5 : 0.22;
+    this.applyParticleColor();
   }
 
   /**
-   * Único punto de entrada por frame. El render loop manda el tiempo; el
-   * scroll manda el contenido. Nunca al revés.
+   * En oscuro las partículas son puntos de acento; en claro ese mismo índigo
+   * al 50 % se lee como suciedad, así que se oscurecen y bajan de opacidad.
    */
+  private applyParticleColor(): void {
+    const material = this.particles?.material as THREE.PointsMaterial | undefined;
+    if (!material) return;
+
+    const accent = new THREE.Color(this.accent.accentHex());
+    if (this.themeName === 'light') accent.multiplyScalar(0.45);
+    material.color.copy(accent);
+    material.opacity = this.themeName === 'dark' ? 0.5 : 0.22;
+  }
+
+  /** Único punto de entrada por frame. El reloj manda el tiempo; el scroll, el contenido. */
   private tick = (delta: number, elapsed: number): void => {
     const progress = this.scroll.sample(delta);
     this.apply(progress);
 
-    // El mixer avanza con tiempo real, pero la acción Walking tiene timeScale
-    // 0: su cabezal es exclusivamente el que ha escrito `apply`. Solo el Idle
-    // aprovecha este delta.
+    // El mixer avanza con tiempo real, pero Walking tiene timeScale 0: su
+    // cabezal es solo el que ha escrito `apply`.
     this.character?.update(delta, elapsed);
 
-    if (this.motorbike) {
-      // Presencia <- scroll (reversible). Posición <- cámara/encuadre.
-      // La salida cuelga de la SIGUIENTE sección (#experience), no de "Más
-      // allá del código" — ver el comentario de motorbikePresence.
-      const nextRange = this.scroll.sectionRange(EXPERIENCE_SECTION);
-      this.motorbike.setPresence(
-        nextRange
-          ? motorbikePresence(
-              progress,
-              this.sample,
-              nextRange,
-              this.scroll.vhToProgress(MOTORBIKE.EXIT_LEAD_VH),
-              this.scroll.vhToProgress(MOTORBIKE.EXIT_FADE_VH),
-            )
-          : 0,
-      );
-      this.motorbike.setPlacement(this.cameraSvc.camera.position.x, this.cameraSvc.visibleHalfWidth);
-    }
+    this.updateMotorbike(progress, delta);
+    this.updateDeskEffects(elapsed);
 
-    if (this.particles) this.particles.rotation.y = elapsed * AMBIENT.PARTICLE_SPIN;
+    if (this.particles && !this.reduced) {
+      this.particles.rotation.y = elapsed * AMBIENT.PARTICLE_SPIN;
+    }
 
     this.cameraSvc.update();
-
-    if (this.motorbike) {
-      // Three.js recalcula matrixWorld dentro de renderer.render(), que corre
-      // DESPUÉS de este callback — sin este par de líneas, el rayo se
-      // lanzaría contra dónde estaban la moto y la cámara el frame anterior,
-      // no donde acaban de colocarse arriba.
-      this.motorbike.root.updateMatrixWorld(true);
-      this.cameraSvc.camera.updateMatrixWorld(true);
-
-      // Hover <- ratón (ralentiza). Clic <- ratón (impulso de giro). Es la
-      // única interacción de toda la escena que no viene del scroll.
-      const hovered = this.motorbike.updatePointer(this.pointer.ndc, this.cameraSvc.camera);
-      if (hovered && this.pointer.consumeClick()) this.motorbike.kick();
-      this.motorbike.update(delta);
-      this.setCursorPointer(hovered);
-    } else {
-      this.pointer.consumeClick(); // descarta clics mientras la moto no existe
-    }
   };
 
-  /** Pequeña señal visual de que la moto es interactiva — solo escribe el DOM si cambia. */
+  private updateMotorbike(progress: number, delta: number): void {
+    const motorbike = this.motorbike;
+    if (!motorbike) return;
+
+    const nextRange = this.scroll.sectionRange(EXPERIENCE_SECTION);
+    motorbike.setPresence(
+      nextRange
+        ? motorbikePresence(
+            progress,
+            this.sample,
+            nextRange,
+            this.scroll.vhToProgress(MOTORBIKE.EXIT_LEAD_VH),
+            this.scroll.vhToProgress(MOTORBIKE.EXIT_FADE_VH),
+          )
+        : 0,
+    );
+    motorbike.setPlacement(this.cameraSvc.camera.position.x, this.cameraSvc.visibleHalfWidth);
+
+    // Three.js recalcula matrixWorld dentro de render(), que corre después de
+    // este callback: sin esto el rayo iría un frame por detrás.
+    motorbike.root.updateMatrixWorld(true);
+    this.cameraSvc.camera.updateMatrixWorld(true);
+
+    const hovered = motorbike.updatePointer(this.pointer.ndc, this.cameraSvc.camera);
+    if (hovered) this.hints.markBikeFound();
+
+    motorbike.update(delta);
+    this.setCursorPointer(hovered);
+  }
+
+  /** Parpadeo de la pantalla y tira LED que responde al puntero. */
+  private updateDeskEffects(elapsed: number): void {
+    const desk = this.desk;
+    if (!desk || !desk.group.visible) return;
+
+    if (!this.reduced) {
+      // Dos senos desfasados: no repite de forma audible y evita el pulso
+      // regular que delataría una animación.
+      const flicker =
+        1 + Math.sin(elapsed * 11.3) * 0.035 + Math.sin(elapsed * 3.7) * 0.02;
+      desk.screenLight.intensity = 3 * flicker;
+    }
+
+    // La tira LED brilla más cuanto más cerca está el puntero, en pantalla.
+    desk.led.getWorldPosition(this.ledWorld).project(this.cameraSvc.camera);
+    const dx = this.ledWorld.x - this.pointer.ndc.x;
+    const dy = this.ledWorld.y - this.pointer.ndc.y;
+    const proximity = Math.max(0, 1 - Math.hypot(dx, dy) / 1.1);
+    (desk.led.material as THREE.MeshStandardMaterial).emissiveIntensity =
+      1.7 + proximity * proximity * 2.6;
+  }
+
   private setCursorPointer(pointer: boolean): void {
     if (pointer === this.cursorIsPointer) return;
     this.cursorIsPointer = pointer;
@@ -225,7 +253,6 @@ export class AnimationService {
   }
 
   private async loadMotorbike(): Promise<void> {
-    // Los dos GLB no dependen entre sí para cargar — en paralelo.
     const [motorbikeScene, riderScene] = await Promise.all([
       this.modelLoader.loadProp(MOTORBIKE.PATH),
       this.modelLoader.loadProp(RIDER.PATH),
@@ -233,23 +260,27 @@ export class AnimationService {
     if (!motorbikeScene) return;
 
     this.motorbike = new MotorbikeProp(motorbikeScene, this.scene.renderer);
-    // roberto.glb es opcional aquí igual que en cualquier otro prop: si no
-    // carga, la moto se ve sola en vez de romper la escena.
-    if (riderScene) this.motorbike.attachRider(buildMotorcycleRider(riderScene));
+
+    // El jinete depende de que el GLB traiga los huesos de Mixamo con sus
+    // nombres. Si no los trae, se monta la moto sola en vez de perderla entera.
+    if (riderScene) {
+      try {
+        this.motorbike.attachRider(buildMotorcycleRider(riderScene));
+      } catch (err) {
+        console.warn('[AnimationService] No se pudo posar al jinete sobre la moto.', err);
+      }
+    }
+
     this.scene.scene.add(this.motorbike.root);
   }
 
-  /** scrollProgress -> estado de la escena. Función determinista, sin memoria. */
+  /** progress -> estado de la escena. Determinista, sin memoria. */
   private apply(progress: number): void {
-    // El contexto se refresca desde las medidas vivas: si cambia el layout o
-    // el tamaño de la ventana, el punto de salida se recalcula solo.
     this.context.aboutTop = this.scroll.sectionRange(ABOUT_SECTION)?.top ?? 0;
     this.context.visibleHalfWidth = this.cameraSvc.visibleHalfWidth;
 
     const s = evaluateTimeline(progress, this.context, this.sample);
 
-    // Igual de vivo: el punto de arranque y las anclas de cámara posteriores
-    // se remiden en cada frame, así que un resize/relayout los recoloca solo.
     this.deskContext.sectionTop = this.scroll.sectionRange(EXPERIENCE_SECTION)?.top ?? 0;
     this.deskContext.enterLeadProgress = this.scroll.vhToProgress(DESK.ENTER_LEAD_VH);
     this.deskContext.enterSpanProgress = this.scroll.vhToProgress(DESK.ENTER_SPAN_VH);
@@ -257,21 +288,17 @@ export class AnimationService {
     this.deskContext.contactTop = this.scroll.sectionRange(CONTACT_SECTION)?.top ?? 0;
     const d = evaluateDesk(progress, this.deskContext, s.cameraPosition, s.cameraLookAt, this.deskSample);
 
-    if (this.deskGroup) {
-      this.deskGroup.visible = d.active;
-      // Gira con el conjunto: el personaje aplica este mismo giro sobre su
-      // propia orientación, y ambos pivotan sobre el mismo punto (SEAT), así
-      // que se mueven rígidos y la pose sigue encajando con el mueble.
-      this.deskGroup.rotation.y = DESK.SEAT_ROT_Y + d.setupYaw;
+    if (this.desk) {
+      this.desk.group.visible = d.active;
+      // Personaje y mueble pivotan sobre el mismo punto, así que giran rígidos
+      // y la pose sigue encajando.
+      this.desk.group.rotation.y = DESK.SEAT_ROT_Y + d.setupYaw;
+      // El código se escribe mientras teclea, no antes.
+      this.desk.screen.setProgress(d.typingBlend > 0 ? d.typingProgress : 0);
     }
 
     if (this.character) {
       if (d.active) {
-        // Fase escritorio: gobierna ella, no la fase 1 — mismo personaje,
-        // reutilizado en vez de una segunda instancia del GLB. Escala propia
-        // (DESK.SCENE_SCALE): el punto de partida está fuera de cuadro en
-        // las dos cámaras, así que el salto de tamaño respecto a la fase 1
-        // nunca llega a verse.
         this.character.root.position.copy(d.position);
         this.character.root.rotation.y = d.rotationY;
         this.character.root.scale.setScalar(d.scale);
@@ -293,14 +320,22 @@ export class AnimationService {
       this.character.applyLayers(this.layers);
     }
 
-    // La cámara se aleja a lo largo de su propio eje de visión lo justo para
-    // que el encuadre quepa en el aspecto actual. Escalar el offset (y no la
-    // posición) conserva el encuadre que decidió el timeline.
-    const camPos = d.active ? d.cameraPosition : s.cameraPosition;
-    const camLook = d.active ? d.cameraLookAt : s.cameraLookAt;
-    // En móvil el texto ocupa todo el ancho, así que la escena de escritorio
-    // se corre hacia el borde derecho para no taparlo (ver MOBILE_CAMERA_SHIFT_X).
-    const shiftX = d.active && this.scene.mobile ? DESK.MOBILE_CAMERA_SHIFT_X : 0;
+    this.placeCamera(
+      d.active ? d.cameraPosition : s.cameraPosition,
+      d.active ? d.cameraLookAt : s.cameraLookAt,
+      d.active,
+    );
+  }
+
+  /**
+   * La cámara se aleja por su eje de visión lo justo para que el encuadre
+   * quepa en el aspecto actual. Escalar el offset (y no la posición) conserva
+   * el encuadre que decidió el timeline.
+   */
+  private placeCamera(camPos: THREE.Vector3, camLook: THREE.Vector3, deskActive: boolean): void {
+    // En móvil el texto ocupa todo el ancho, así que la escena se corre hacia
+    // el borde derecho para no taparlo.
+    const shiftX = deskActive && this.scene.mobile ? DESK.MOBILE_CAMERA_SHIFT_X : 0;
     this.cameraSvc.lookTarget.set(camLook.x + shiftX, camLook.y, camLook.z);
     this.cameraSvc.camera.position
       .copy(this.cameraSvc.lookTarget)
@@ -316,22 +351,27 @@ export class AnimationService {
 
     if (!character.availableStates.has('Walking')) {
       console.warn(
-        `[AnimationService] Faltan los clips ${missing.join(', ')}. La fase 1 desplazará al ` +
-          'personaje pero no habrá animación que scrubbear. Reexporta el GLB con "Idle" y "Walking".',
+        `[AnimationService] Faltan los clips ${missing.join(', ')}. Reexporta el GLB con "Idle" y "Walking".`,
       );
       return;
     }
 
     console.warn(
-      `[AnimationService] Falta el clip ${missing.join(', ')}. Walking queda a peso 1 y su ` +
-        'primer fotograma hace de reposo, para no caer a la bind pose. Añade un "Idle" al GLB ' +
-        'para recuperar la mezcla real de reposo.',
+      `[AnimationService] Falta el clip ${missing.join(', ')}. Walking queda a peso 1 para no caer a la bind pose.`,
     );
   }
 
   dispose(): void {
     this.scroll.dispose();
     this.motorbike?.dispose();
+    this.desk?.dispose();
+    this.character?.dispose();
+
+    if (this.particles) {
+      this.particles.geometry.dispose();
+      (this.particles.material as THREE.Material).dispose();
+    }
+
     this.setCursorPointer(false);
   }
 }

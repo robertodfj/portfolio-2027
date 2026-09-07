@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import * as THREE from 'three';
+import { cssColorHex } from '../shared/browser.util';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
@@ -65,10 +66,11 @@ export class ModelLoaderService {
   private readonly loader = new GLTFLoader();
 
   constructor() {
-    // Soporte Draco opcional para pipelines comprimidos — no-op seguro si el
-    // GLB no está comprimido con Draco.
+    // Los dos GLB vienen comprimidos con Draco, así que el decodificador es
+    // obligatorio. Se sirve desde /assets y no desde un CDN de terceros: no
+    // depende de que responda un tercero ni le manda la IP del visitante.
     const draco = new DRACOLoader();
-    draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+    draco.setDecoderPath('assets/draco/');
     this.loader.setDRACOLoader(draco);
   }
 
@@ -78,12 +80,8 @@ export class ModelLoaderService {
    * un placeholder procedural en vez de colgarse para siempre.
    */
   async loadCharacter(path = 'assets/models/roberto.glb'): Promise<CharacterController> {
-    console.info(`[ModelLoaderService] Cargando "${path}"…`);
     try {
       const gltf = await this.withTimeout(this.loader.loadAsync(path), 15000);
-      console.info(
-        `[ModelLoaderService] GLB cargado. Animaciones detectadas: ${gltf.animations.map((a) => a.name).join(', ') || '(ninguna)'}`,
-      );
       return new GltfCharacter(gltf);
     } catch (err) {
       console.warn(
@@ -110,7 +108,7 @@ export class ModelLoaderService {
 
   private withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`Timeout tras ${ms}ms (¿decodificador Draco colgado?)`)), ms);
+      const timer = setTimeout(() => reject(new Error(`Timeout tras ${ms}ms cargando el modelo`)), ms);
       promise.then(
         (v) => {
           clearTimeout(timer);
@@ -131,17 +129,12 @@ const wrap01 = (v: number): number => {
 };
 
 /**
- * Corrección de escala/pivote compartida por cualquier humanoide que entre en
- * la escena (el personaje que camina y, ahora, el jinete de la moto). Mide la
- * bounding box en bind pose y la ajusta a `targetHeight` unidades, centrada en
- * X/Z, con los pies en y = -(targetHeight / 2).
+ * Ajusta cualquier humanoide al mismo convenio: altura `targetHeight`,
+ * centrado en X/Z y pies en y = -(targetHeight / 2).
  *
- * Extraída de GltfCharacter.normalize() para que motorcycle-rider.ts reutilice
- * exactamente la misma convención (mismo origen, misma escala por altura) sin
- * duplicar la fórmula — cualquier humanoide normalizado con esta función cae
- * en el mismo sistema de coordenadas, condición necesaria para que las
- * constantes de asiento/manillar/estriberas en narrative.config.ts (medidas
- * una vez, a mano, sobre este mismo convenio) sigan siendo válidas.
+ * La comparten el personaje que camina y el jinete de la moto. Las constantes
+ * de asiento, manillar y estriberas de narrative.config.ts están medidas sobre
+ * este sistema, así que cambiarlo las invalida todas.
  */
 export function normalizeHumanoid(inner: THREE.Object3D, targetHeight = 2): void {
   let box = new THREE.Box3().setFromObject(inner);
@@ -160,11 +153,10 @@ export function normalizeHumanoid(inner: THREE.Object3D, targetHeight = 2): void
 }
 
 /**
- * Camino real GLB: grafo de escena + AnimationMixer + búsqueda de clips.
+ * Personaje real: grafo de escena, AnimationMixer y búsqueda de clips.
  *
- * Las AnimationAction se crean UNA sola vez (perezosamente, cacheadas) y se
- * dejan en `play()` de por vida. Por frame solo se tocan dos números por
- * capa —`weight` y `time`—, nunca se recrean mixer ni acciones.
+ * Las acciones se crean una vez y se quedan en play() para siempre. Por frame
+ * solo se tocan dos números por capa (weight y time).
  */
 class GltfCharacter implements CharacterController {
   readonly root: THREE.Group;
@@ -203,21 +195,13 @@ class GltfCharacter implements CharacterController {
   }
 
   /**
-   * Distintas herramientas (Mixamo, Meshy, Hi3D, un export manual de
-   * Blender...) exportan cada una a su escala y su pivote. En vez de confiar
-   * en que todo modelo futuro venga a escala humana con los pies en y = 0, lo
-   * medimos una vez desde su bounding box en bind pose y lo corregimos para
-   * que siempre aterrice donde la cámara del narrativo espera.
+   * Cada herramienta exporta a su escala y su pivote, así que en vez de
+   * confiar en el GLB se mide su bounding box y se corrige.
    */
   private normalize(inner: THREE.Object3D): void {
-    // Siempre se ajusta a targetHeight — sin zona muerta. Una tolerancia
-    // "ya está bastante cerca, sáltatelo" suena prudente pero deja pasar en
-    // silencio imports mal escalados.
-    const before = new THREE.Box3().setFromObject(inner).getSize(new THREE.Vector3());
+    // Siempre se ajusta, sin zona muerta: una tolerancia del tipo "ya está
+    // bastante cerca" deja pasar en silencio imports mal escalados.
     normalizeHumanoid(inner);
-    console.info(
-      `[ModelLoaderService] Modelo normalizado — altura original: ${before.y.toFixed(2)}u, escala aplicada: ${inner.scale.x.toFixed(3)}x.`,
-    );
   }
 
   private mapClips(clips: THREE.AnimationClip[]): void {
@@ -299,7 +283,6 @@ class GltfCharacter implements CharacterController {
  */
 function stripHorizontalRootMotion(clip: THREE.AnimationClip): THREE.AnimationClip {
   const out = clip.clone();
-  let stripped = false;
 
   for (const track of out.tracks) {
     const dot = track.name.lastIndexOf('.');
@@ -315,20 +298,14 @@ function stripHorizontalRootMotion(clip: THREE.AnimationClip): THREE.AnimationCl
       values[i] = x0; // X congelada
       values[i + 2] = z0; // Z congelada — la vertical (i + 1) se respeta
     }
-    stripped = true;
   }
 
-  if (stripped) {
-    console.info(`[ModelLoaderService] Root motion horizontal anulado en el clip "${clip.name}".`);
-  }
   return out;
 }
 
 /**
- * Stand-in procedural low-poly para poder revisar la experiencia antes de que
- * exista el GLB definitivo. Implementa exactamente la misma API applyLayers()/
- * update(), incluida la fase scrubbed, así que el comportamiento frente al
- * scroll es idéntico al del modelo real.
+ * Suplente low-poly por si el GLB no carga. Implementa la misma API, fase
+ * scrubbed incluida, así que responde al scroll igual que el modelo real.
  */
 class PlaceholderCharacter implements CharacterController {
   readonly root = new THREE.Group();
@@ -360,7 +337,11 @@ class PlaceholderCharacter implements CharacterController {
 
   private build(): void {
     const mat = new THREE.MeshStandardMaterial({ color: 0x1a1a1f, roughness: 0.55, metalness: 0.25 });
-    const accentMat = new THREE.MeshStandardMaterial({ color: 0x6e7bff, roughness: 0.35, metalness: 0.4 });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: cssColorHex('--accent', 0x6e7bff),
+      roughness: 0.35,
+      metalness: 0.4,
+    });
 
     this.torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 0.55, 4, 12), mat);
     this.torso.position.y = 1.05;

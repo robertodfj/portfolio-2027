@@ -23,6 +23,10 @@
   ↑
 </button>
 
+<p class="scene-fallback" *ngIf="sceneUnavailable()" role="status">
+  {{ 'a11y.noWebgl' | translate }}
+</p>
+
 <span class="visually-hidden" *ngIf="usingPlaceholder()">
   {{ 'a11y.placeholderModel' | translate }}
 </span>

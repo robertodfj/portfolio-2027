@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef } from '@angular/core';
+import { ChangeDetectionStrategy, AfterViewInit, Component, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { revealOnScroll } from '../../shared/reveal.util';
@@ -20,8 +20,8 @@ interface ExperienceItem {
 
 @Component({
   selector: 'app-experience',
-  standalone: true,
   imports: [CommonModule, TranslateModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './experience.component.html',
   styleUrl: './experience.component.scss',
 })

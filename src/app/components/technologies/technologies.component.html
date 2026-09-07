@@ -1,6 +1,7 @@
 <section id="technologies" class="tech">
   <p class="eyebrow" data-reveal>{{ 'tech.eyebrow' | translate }}</p>
   <h2 class="section-title" data-reveal>{{ 'tech.title' | translate }}</h2>
+  <p class="tech__hint" data-reveal>{{ 'tech.hint' | translate }}</p>
 
   <div class="tech__grid" data-reveal>
     <button
@@ -11,7 +12,10 @@
       (mouseleave)="setHovered(null)"
       (focus)="setHovered(t.name)"
       (blur)="setHovered(null)"
+      (click)="toggle(t)"
+      [attr.aria-pressed]="selected() === t.key"
       [class.tech__item--active]="hovered() === t.name"
+      [class.tech__item--selected]="selected() === t.key"
     >
       <span class="tech__name">{{ t.name }}</span>
       <span class="tech__note">{{ 'tech.notes.' + t.key | translate }}</span>

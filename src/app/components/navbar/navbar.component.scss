@@ -105,8 +105,14 @@
       padding: 6rem 1.5rem 2rem;
       background: var(--scrim-solid);
       transform: translateY(-100%);
-      transition: transform 0.4s var(--easing);
-      &--open { transform: translateY(0); }
+      /* Oculto de verdad mientras está plegado: con solo el transform, los
+         enlaces siguen siendo tabulables fuera de pantalla. */
+      visibility: hidden;
+      transition: transform 0.4s var(--easing), visibility 0.4s;
+      &--open {
+        transform: translateY(0);
+        visibility: visible;
+      }
     }
     &__toggle { display: flex; }
   }

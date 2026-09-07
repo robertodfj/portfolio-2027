@@ -6,7 +6,7 @@
     robertodfj<span class="nav__dim">.com</span>
   </a>
 
-  <nav class="nav__links" [class.nav__links--open]="menuOpen()" [attr.aria-label]="'nav.aria' | translate">
+  <nav class="nav__links" [class.nav__links--open]="menuOpen()" [attr.inert]="menuHidden() ? '' : null" [attr.aria-label]="'nav.aria' | translate">
     <button class="nav__link" type="button" *ngFor="let link of links" (click)="goTo(link.id)">
       {{ 'nav.' + link.id | translate }}
     </button>
@@ -21,7 +21,7 @@
       type="button"
       (click)="toggleMenu()"
       [attr.aria-expanded]="menuOpen()"
-      [attr.aria-label]="'nav.openMenu' | translate"
+      [attr.aria-label]="(menuOpen() ? 'nav.closeMenu' : 'nav.openMenu') | translate"
     >
       <span></span><span></span>
     </button>

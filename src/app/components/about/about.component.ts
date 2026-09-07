@@ -1,7 +1,14 @@
-import { AfterViewInit, Component, ElementRef } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { revealOnScroll } from '../../shared/reveal.util';
+import { SceneHintsService } from '../../shared/scene-hints.service';
 
 /**
  * Misma anatomía que ProjectCard (etiqueta mono + icono + título + texto),
@@ -19,12 +26,15 @@ interface Trait {
 
 @Component({
   selector: 'app-about',
-  standalone: true,
   imports: [CommonModule, TranslateModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
 })
 export class AboutComponent implements AfterViewInit {
+  /** Para retirar el aviso de la moto en cuanto la descubre. */
+  readonly hints = inject(SceneHintsService);
+
   /**
    * Solo lo que NO se traduce: la etiqueta en mono (un código, igual en los
    * dos idiomas) y el icono. Título y texto viven en los JSON de i18n.

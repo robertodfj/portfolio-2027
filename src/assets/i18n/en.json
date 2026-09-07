@@ -7,9 +7,9 @@
     "contact": "Contact",
     "cta": "Get in touch",
     "aria": "Main navigation",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
-
   "hero": {
     "eyebrow": "portfolio.init()",
     "available": "OPEN TO WORK",
@@ -18,7 +18,6 @@
     "scroll": "scroll",
     "languageLabel": "Choose your language"
   },
-
   "about": {
     "eyebrow": "about-me.md",
     "title": "Beyond the code",
@@ -41,9 +40,9 @@
         "title": "Motorcycles",
         "detail": "My biggest passion, and where I find the challenges that aren't on a keyboard."
       }
-    }
+    },
+    "bikeHint": "Hover the bike"
   },
-
   "experience": {
     "eyebrow": "experience.log",
     "title": "What I've been working on",
@@ -80,10 +79,10 @@
       }
     }
   },
-
   "tech": {
     "eyebrow": "stack.json",
     "title": "What I work with",
+    "hint": "Tap one to tint the scene with its colour and show its code on screen.",
     "notes": {
       "java": "Main backend",
       "spring": "APIs and services",
@@ -101,7 +100,6 @@
       "docker": "Reproducible environments"
     }
   },
-
   "projects": {
     "eyebrow": "projects/",
     "title": "Things I've built",
@@ -139,20 +137,26 @@
       }
     }
   },
-
   "contact": {
     "eyebrow": "contact.send()",
     "titleLine1": "Got a project",
     "titleLine2": "in mind?",
     "lead": "I'm looking for my next challenge as a Full Stack developer. Let's talk.",
-    "cta": "Get in touch ↗"
+    "cta": "Get in touch ↗",
+    "terminal": {
+      "label": "Type a command",
+      "placeholder": "type 'help' and hit Enter",
+      "welcome": "Welcome. Type 'help' to see the available commands.",
+      "help": "Commands: email · github · linkedin · whoami · clear",
+      "whoami": "Roberto de Frutos Jiménez — Full Stack developer focused on Java backend.",
+      "unknown": "Unknown command: {{command}}. Try 'help'."
+    }
   },
-
   "loading": "LOADING EXPERIENCE",
-
   "a11y": {
     "scrollTop": "Back to top",
     "placeholderModel": "3D placeholder model active — replace src/assets/models/roberto.glb with the final model.",
+    "noWebgl": "Your browser cannot render the 3D scene, but all the content is still available.",
     "toLight": "Switch to light mode",
     "toDark": "Switch to dark mode",
     "langEs": "Switch language to Spanish",

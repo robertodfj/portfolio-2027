@@ -2,108 +2,102 @@
 
 # 🏍️ Roberto de Frutos Jiménez — Portfolio 3D
 
-### Una experiencia web narrativa dirigida por scroll, construida con Angular + Three.js + GSAP
+### Experiencia web narrativa dirigida por scroll, con Angular + Three.js + GSAP
 
-[![Angular](https://img.shields.io/badge/Angular-18-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.io/)
+[![Angular](https://img.shields.io/badge/Angular-20-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.dev/)
 [![Three.js](https://img.shields.io/badge/Three.js-0.166-000000?style=for-the-badge&logo=three.js&logoColor=white)](https://threejs.org/)
 [![GSAP](https://img.shields.io/badge/GSAP-3.12-88CE02?style=for-the-badge&logo=greensock&logoColor=white)](https://gsap.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
 </div>
 
 ---
 
-## ✨ Qué es esto
+## Qué es
 
-Un personaje 3D acompaña al visitante a lo largo de una narrativa dirigida por **scroll nativo** — sin `pin`, sin saltos, sin bloquear jamás el scroll del navegador. A medida que avanzas por la página, la cámara, el personaje y las escenas se interpolan en tiempo real siguiendo un timeline de GSAP `ScrollTrigger`.
+Un personaje 3D acompaña al visitante a lo largo de la página. El scroll es
+**nativo**: no hay `pin`, ni saltos, ni bloqueo del navegador en ningún momento.
 
-> 🛵 Incluye una escena de moto, un shader GLSL personalizado con efecto Fresnel para una animación de vino, y un personaje placeholder procedural que funciona out-of-the-box sin necesidad de modelo `.glb`.
+El recorrido, en orden:
 
----
+1. **Hero** — el personaje espera de pie, en Idle.
+2. **Sobre mí** — se va caminando por la izquierda y entra la moto, con él montado.
+3. **Experiencia** — vuelve caminando y se sienta en el escritorio.
+4. **Tecnologías** — la cámara se abre sobre el puesto; al pulsar una tecnología, su
+   color tiñe la página entera y su código aparece en la pantalla del portátil.
+5. **Proyectos / Contacto** — la cámara cierra sobre él mientras teclea.
 
-## 🧱 Stack
+## Stack
 
 | Capa | Tecnología |
 |---|---|
-| Framework | Angular 18 (standalone components) |
-| 3D / WebGL | Three.js — `GLTFLoader`, `AnimationMixer`, `DRACOLoader` |
-| Animación de scroll | GSAP + `ScrollTrigger` |
-| Lenguaje | TypeScript |
-| Estilos | SCSS |
+| Framework | Angular 20, componentes standalone y signals |
+| 3D / WebGL | Three.js — `GLTFLoader`, `DRACOLoader`, `AnimationMixer`, `BokehPass` |
+| Scroll | GSAP + `ScrollTrigger` |
+| i18n | ngx-translate, con los textos en `assets/i18n/*.json` |
+| Estilos | SCSS con tokens de diseño y tema claro/oscuro |
 
----
-
-## 🚀 Puesta en marcha
+## Puesta en marcha
 
 ```bash
 npm install
-npm start
+npm start          # http://localhost:4200
+npm run build      # build de producción en dist/
 ```
 
-Abre **http://localhost:4200** — `ng serve` con recarga en caliente.
-
-Build de producción:
-
-```bash
-npm run build
-```
-
----
-
-## 🗂️ Arquitectura
+## Arquitectura
 
 ```
 src/
  ├── app/
- │   ├── components/
- │   │   ├── navbar/            🧭 Navegación + indicador de progreso de scroll
- │   │   ├── loading-screen/    ⏳ Pantalla de carga inicial
- │   │   ├── hero/              👋 Sección 1 — presentación
- │   │   ├── about/             🙋 Sección 2 — sobre mí
- │   │   ├── experience/        💼 Sección 3 — experiencia profesional
- │   │   ├── technologies/      🛠️ Sección 4 — stack interactivo
- │   │   ├── projects/          🚀 Sección 5 — proyectos
- │   │   └── contact/           ✉️ Sección 6 — contacto
+ │   ├── components/          una carpeta por sección + navbar, loader y selectores
  │   │
  │   ├── three/
- │   │   ├── three-scene.service.ts   🎬 Renderer, escena, luces, render loop
- │   │   ├── model-loader.service.ts  📦 Carga del GLB + fallback placeholder
- │   │   ├── camera.service.ts        🎥 Cámara + lookAt tweenable
- │   │   ├── animation.service.ts     🎞️ Orquestación GSAP ScrollTrigger
- │   │   └── scene-props.ts           🪑 Escritorio, moto y partículas
+ │   │   ├── narrative.config.ts      todos los números del narrativo, en un sitio
+ │   │   ├── character-timeline.ts    funciones PURAS de progress -> estado
+ │   │   ├── scroll-progress.service  única fuente del scroll, normalizado [0,1]
+ │   │   ├── animation.service.ts     orquestador: scroll -> timeline -> escena
+ │   │   ├── three-scene.service.ts   renderer, luces, postprocesado, render loop
+ │   │   ├── model-loader.service.ts  carga de GLB + personaje suplente
+ │   │   ├── camera.service.ts        cámara y corrección de encuadre por aspecto
+ │   │   ├── desk-setup.ts            mesa, silla y MacBook, construidos por código
+ │   │   ├── code-screen.ts           editor pintado en canvas para la pantalla
+ │   │   ├── motorbike-prop.ts        moto: presencia por scroll, giro por ratón
+ │   │   ├── motorcycle-rider.ts      pose del jinete, resuelta con IK
+ │   │   └── ik.ts                    IK analítica de dos huesos
  │   │
- │   ├── shared/reveal.util.ts  ✨ Reveal de textos on-scroll
- │   └── app.component.*        🔗 Monta el canvas fijo + secciones
+ │   └── shared/              idioma, tema, acento, catálogo de tecnologías
  │
  └── assets/
-     ├── models/roberto.glb     ← tu modelo definitivo va aquí
-     ├── textures/
-     └── images/
+     ├── models/     roberto.glb (personaje) y motorbike.glb
+     ├── draco/      decodificador Draco, autoalojado
+     ├── fonts/      woff2 autoalojadas
+     └── i18n/       es.json y en.json
 ```
 
-Todo el código WebGL vive en `app/three/*` como servicios inyectables. `app.component.ts` es el único punto que los conecta; ningún componente de sección toca WebGL directamente.
+Todo el WebGL vive en `app/three/*`. Ningún componente de sección toca Three.js.
 
----
+## Cómo funciona el narrativo
 
-## 🎬 Cómo funciona la narrativa de scroll
+`ScrollProgressService` expone un único `progress` en `[0,1]`, con un solo
+`ScrollTrigger` y un solo listener. `character-timeline.ts` lo convierte en
+posición, rotación, mezcla de animaciones y cámara mediante **funciones puras**:
+sin estado interno ni acumuladores, el mismo `progress` da siempre el mismo
+resultado.
 
-`AnimationService` registra un único `ScrollTrigger` sobre `document.body` con `scrub` (sin `pin`) — el scroll es 100% nativo. En cada frame se interpola, mediante keyframes en `progress` **0 → 1** (`0, 0.25, 0.40, 0.55, 0.70, 0.85, 1`), la posición del personaje, la cámara y el estado de animación:
+De ahí sale que subir el scroll deshaga el recorrido exactamente: no es una
+animación de vuelta, es la misma función evaluada al revés.
 
-`Idle` → `Walking` → `Typing` → `Motorcycle` → `Standing` → `Looking`
+`AnimationService` es el único punto que conoce a la vez el scroll, el timeline
+y la escena, y todo corre en un único `requestAnimationFrame` fuera de la zona
+de Angular.
 
-El reveal de texto de cada sección (`reveal.util.ts`) usa un `ScrollTrigger` independiente — solo anima opacidad/posición, sin interferir con la narrativa 3D.
+## Añadir o cambiar el modelo 3D
 
----
+1. Exporta en `.glb` y déjalo en `src/assets/models/roberto.glb`.
+2. Nombra los `AnimationClips` con alguna de estas palabras clave:
 
-## 🧍 Añadir tu modelo 3D definitivo
-
-El proyecto arranca con un **personaje placeholder procedural** (sin `.glb`) para poder revisar la experiencia completa desde el primer `npm start`.
-
-1. Exporta el personaje en **`.glb`** (Blender → `File > Export > glTF 2.0 (.glb/.gltf)`, formato binario).
-2. Colócalo en `src/assets/models/roberto.glb` — el loader lo detecta automáticamente, **cero cambios de código**.
-3. Si el `.glb` incluye `AnimationClips`, nómbralos con estas palabras clave:
-
-| Estado narrativo | Palabras clave aceptadas |
+| Estado | Palabras clave |
 |---|---|
 | `Idle` | `idle`, `breathing`, `stand_idle` |
 | `Walking` | `walk`, `walking`, `run` |
@@ -112,26 +106,63 @@ El proyecto arranca con un **personaje placeholder procedural** (sin `.glb`) par
 | `Standing` | `standing`, `stand`, `pose`, `presentation` |
 | `Motorcycle` | `motor`, `bike`, `ride` |
 
-📄 Detalles completos y recomendaciones de export (peso, Draco, orientación) en [`src/assets/models/README.md`](./src/assets/models/README.md).
+3. El jinete de la moto necesita los huesos de Mixamo con sus nombres
+   (`mixamorigHips`, `mixamorigLeftArm`…). Si faltan, la moto sale sola.
 
----
+Si el modelo llega sin cargar, entra un personaje suplente procedural que
+responde al scroll igual que el real.
 
-## ⚡ Rendimiento
+**Comprime siempre los modelos antes de subirlos.** Sin comprimir, `motorbike.glb`
+pesaba 38 MB:
 
-- `setPixelRatio(Math.min(devicePixelRatio, 2))` — `1.5` en móvil
-- Sombras y antialiasing desactivados en pantallas < 768px
-- `FogExp2` para limitar coste de dibujo en profundidad
-- `NgZone.runOutsideAngular` en el render loop y el `ScrollTrigger` — sin detección de cambios de Angular por frame
-- Geometría mínima en partículas, set-pieces y placeholder
+```bash
+npm run opt:models
+```
 
-## 🔍 SEO
+## Scripts de generación
 
-`index.html` incluye `title`, `meta description`, Open Graph y contenido `<noscript>` accesible. Cada sección usa HTML semántico (`<section>`, `h1`–`h3`, enlaces reales) para mantenerse indexable pese a ser una experiencia 3D.
+Los assets estáticos no se editan a mano, se generan:
+
+```bash
+npm run gen:fonts     # descarga las woff2 de Google y escribe fonts.css
+npm run gen:og        # imagen de compartir (assets/images/og-cover.jpg)
+npm run gen:favicon   # rasteriza favicon.svg a PNG
+```
+
+`gen:og` y `gen:favicon` usan Chrome a través de puppeteer-core; la ruta al
+navegador está al principio de cada script.
+
+## Rendimiento
+
+- Bundle inicial: ~283 kB transferidos.
+- Modelos comprimidos con Draco y texturas WebP a 1024 px.
+- Fuentes autoalojadas, solo subconjunto `latin`.
+- Sombras, antialiasing y desenfoque de profundidad desactivados por debajo de 768 px.
+- `NgZone.runOutsideAngular` en el render loop y en los listeners de scroll;
+  todos los componentes en `OnPush`.
+
+## Accesibilidad
+
+- Contraste AA verificado en los dos temas.
+- Con `prefers-reduced-motion` se apaga el movimiento que va solo (giro de la
+  moto, partículas, parpadeo de la pantalla); el recorrido por scroll se
+  mantiene, porque lo controla el propio usuario.
+- El menú móvil plegado va `inert`, y las copias del carrusel de proyectos
+  `aria-hidden`.
+- Si no hay WebGL se avisa y el contenido sigue siendo accesible.
+
+## Despliegue
+
+`dist/roberto-portfolio/browser` es estático. `src/_headers` trae CSP y cabeceras
+de caché para Netlify y Cloudflare Pages; en otros hosts hay que traducirlas.
+
+Antes de publicar, cambia `https://robertodfj.com/` por tu dominio real en
+`src/index.html` (canonical, Open Graph), `src/robots.txt` y `src/sitemap.xml`.
 
 ---
 
 <div align="center">
 
-Hecho con 🛠️ por **Roberto de Frutos Jiménez**
+Hecho por **Roberto de Frutos Jiménez**
 
 </div>

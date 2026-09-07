@@ -4,20 +4,16 @@ import { applyTwoBoneIK } from './ik';
 import { RIDER } from './narrative.config';
 
 /**
- * Construye a Roberto MONTADO en la moto: una instancia propia, separada del
- * personaje que camina (que sigue viviendo en AnimationService con su propio
- * AnimationMixer intacto). No hay clip de "conducir" en el GLB — según lo
- * pedido, es preferible una pose estática bien colocada a forzar Idle/Walking
- * sobre el asiento, así que aquí no se crea ningún AnimationMixer: es
- * geometría posada una única vez, con coste cero por frame.
+ * Roberto montado en la moto: instancia propia, separada del personaje que
+ * camina. No hay clip de "conducir" en el GLB, así que es una pose estática
+ * colocada una vez — sin AnimationMixer y con coste cero por frame.
  *
- * `scene` debe ser un gltf.scene de roberto.glb recién cargado — nunca el
- * mismo Object3D que ya esté en uso en otra parte de la escena.
+ * `scene` debe ser un gltf.scene recién cargado, nunca uno ya en uso.
  *
- * Devuelve un Group listo para colgar como HERMANO del `inner` de la moto
- * dentro de `spin` (ver MotorbikeProp.attachRider): al vivir en ese mismo
- * espacio local, gira/escala/aparece con la moto de forma automática, sin
- * ningún cálculo adicional por frame — es pura jerarquía de Three.js.
+ * El Group que devuelve se cuelga como hermano del GLB de la moto, así que
+ * hereda su giro y su escala por pura jerarquía.
+ *
+ * Lanza si el GLB no trae los huesos de Mixamo con sus nombres.
  */
 export function buildMotorcycleRider(scene: THREE.Group): THREE.Group {
   const group = new THREE.Group();
@@ -77,19 +73,11 @@ export function buildMotorcycleRider(scene: THREE.Group): THREE.Group {
   neck.updateWorldMatrix(true, true);
 
   // --- 3. Brazos y piernas: IK de 2 huesos hacia manillar/estriberas --------
-  // El pole (referencia de hacia qué lado dobla codo/rodilla) es, por
-  // defecto, la posición ACTUAL de la articulación media: el rig ya se dobla
-  // de forma natural hacia ese lado en bind pose, así que sirve sin tener que
-  // adivinar a mano ningún eje "hacia fuera". Funciona bien para los brazos
-  // (el codo SÍ tiene una flexión clara en bind pose), pero NO para las
-  // piernas: con el personaje de pie, el muslo cuelga casi perfectamente
-  // recto hacia abajo, así que esa referencia queda casi alineada con la
-  // propia dirección cadera->estribera — un pole casi degenerado, cuyo
-  // resultado depende del ruido de la captura de movimiento del bind pose y
-  // puede doblar la rodilla hacia cualquier lado (incluido cruzándola hacia
-  // el lado contrario). Las piernas usan en su lugar un pole explícito
-  // "hacia delante" de la moto: así la rodilla dobla siempre hacia el
-  // manillar, nunca hacia el lado, en ambas piernas por igual.
+  // Por defecto el pole es la posición actual de la articulación, que sirve
+  // para los brazos porque el codo ya tiene flexión en bind pose. Para las
+  // piernas no: de pie el muslo cuelga recto, el pole queda casi alineado con
+  // la dirección cadera->estribera y la rodilla puede doblar hacia cualquier
+  // lado. Por eso las piernas usan un pole explícito hacia delante.
   const solveLimb = (
     rootName: string,
     midName: string,
@@ -110,20 +98,12 @@ export function buildMotorcycleRider(scene: THREE.Group): THREE.Group {
       .addScaledVector(forward, 0.6)
       .addScaledVector(new THREE.Vector3(0, 0, lateralSign), 0.15);
 
-  // El pole del codo SÍ tiene una referencia natural fiable (el propio codo
-  // en bind pose, con el torso ya inclinado) — a diferencia de la rodilla no
-  // hace falta sustituirlo entero, solo empujarlo hacia fuera un poco más de
-  // lo que da el bind, para que el codo se abra en vez de quedar pegado al
-  // torso o hundido en el depósito.
+  // El codo solo necesita abrirse un poco más de lo que da el bind.
   //
-  // IMPORTANTE: la base de este empuje tiene que ser la posición del PROPIO
-  // codo (mid), no la del hombro (root). `applyTwoBoneIK` resta rootPos del
-  // pole para quedarse solo con la dirección — si el pole fuera
-  // hombro + desplazamiento, esa resta cancela el hombro y deja un vector
-  // puramente lateral cuya MAGNITUD da igual tras normalizar (por eso
-  // ELBOW_OUT no tenía ningún efecto al principio). Partiendo del codo, el
-  // desplazamiento lateral SÍ cambia la proporción entre "dirección natural
-  // del bind" y "empuje hacia fuera", y por tanto el resultado final.
+  // La base del empuje tiene que ser el PROPIO codo, no el hombro:
+  // applyTwoBoneIK resta la posición de la raíz para quedarse con la
+  // dirección, así que partiendo del hombro la resta lo cancela y ELBOW_OUT
+  // no haría nada.
   const elbowPole = (foreArmBoneName: string, lateralSign: number) =>
     bone(foreArmBoneName)
       .getWorldPosition(new THREE.Vector3())

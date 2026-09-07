@@ -1,38 +1,27 @@
-/* ==========================================================================
-   DESIGN TOKENS
-   Palette: near-black stage + off-white ink + one controlled electric-indigo
-   accent (#6E7BFF) and a single warm ember accent (#FF8A3D) reserved for
-   the technologies-hover moment only. Grayscale carries almost everything.
-   Type: Space Grotesk (display) / Inter (body) / JetBrains Mono (labels,
-   code-like eyebrows, coordinates) — the mono face is the signature: every
-   section label reads like a code comment, not a numbered badge.
-   ========================================================================== */
+/* Tokens de diseño.
+   Paleta: fondo casi negro, tinta hueso, un acento índigo y un ámbar que solo
+   se usa al pasar el ratón por las tecnologías. */
 :root {
   --ink: #f2f2f0;
   --ink-dim: #a3a3a8;
-  --ink-faint: #6b6b70;
+  --ink-faint: #82828a;
   --stage: #08080a;
   --stage-raised: #101014;
   --line: #232328;
+  /* Borde de controles: --line no llega a 3:1 y en un botón el borde es la
+     única señal de que se puede pulsar. */
+  --control-edge: #606068;
   --accent: #6e7bff;
   --accent-dim: #6e7bff33;
   --ember: #ff8a3d;
-  /* Canales sueltos para los rgba() con alfa de los componentes: así los
-     tintes del acento (halos, fondos al 6%, bordes al 20%) siguen al tema en
-     vez de quedarse clavados en el índigo del modo oscuro. */
+  /* Canales sueltos para los rgba() de los componentes, así los tintes del
+     acento siguen al tema. */
   --accent-rgb: 110, 123, 255;
   --ok: #65d68a;
   --ok-rgb: 101, 214, 138;
 
-  /* ------------------------------------------------------------------
-     CAPAS. Antes estos valores estaban repetidos a mano por los SCSS de
-     cada componente (rgba(255,255,255,0.07) para un borde, rgba(14,14,18,
-     0.82) para una tarjeta...). Con dos temas eso no se sostiene: en claro
-     hay que ACLARAR con negro, no con blanco, así que la misma regla
-     necesita valores opuestos. Nombrarlos por su papel —superficie, canto,
-     brillo, sombra— es lo que permite que un único bloque más abajo
-     redefina el tema entero.
-     ------------------------------------------------------------------ */
+  /* Capas nombradas por su papel. En claro hay que aclarar con negro y no con
+     blanco, así que la misma regla necesita valores opuestos. */
   --surface: rgba(14, 14, 18, 0.82);
   --surface-dim: rgba(8, 8, 10, 0.55);
   --surface-soft: rgba(255, 255, 255, 0.035);
@@ -53,26 +42,21 @@
   --easing: cubic-bezier(0.19, 1, 0.22, 1);
 }
 
-/**
- * TEMA CLARO. Se activa con data-theme="light" en <html> (lo pone
- * ThemeService). Deliberadamente NO se usa `prefers-color-scheme`: el sitio
- * arranca siempre en oscuro, que es el aspecto para el que está iluminada la
- * escena 3D, y solo cambia si el visitante lo pide.
- *
- * El acento se oscurece respecto al oscuro (#6e7bff -> #454fd6): el mismo
- * índigo que sobre negro contrasta de sobra, sobre un fondo casi blanco se
- * queda corto para texto pequeño.
- */
+/* Tema claro. Lo activa ThemeService con data-theme="light" en <html>.
+   No se mira prefers-color-scheme a propósito: el sitio arranca en oscuro,
+   que es como está iluminada la escena 3D.
+   El acento se oscurece porque el mismo índigo sobre blanco no llega a 4.5:1. */
 :root[data-theme='light'] {
   --ink: #16161a;
   --ink-dim: #4e4e58;
-  --ink-faint: #83838d;
+  --ink-faint: #686873;
   --stage: #f3f3f1;
   --stage-raised: #ffffff;
   --line: #dcdcdf;
+  --control-edge: #8a8a94;
   --accent: #454fd6;
   --accent-dim: #454fd633;
-  --ember: #c85b12;
+  --ember: #a8480a;
   --accent-rgb: 69, 79, 214;
   --ok: #1f8a4c;
   --ok-rgb: 31, 138, 76;
@@ -100,14 +84,12 @@ html, body {
   font-family: var(--font-body);
   scroll-behavior: auto;
   overflow-x: hidden;
-  /* La transición va aquí y no en `*`: al cambiar de tema cambian decenas de
-     propiedades a la vez y animarlas todas cuesta más de lo que aporta. */
+  /* Aquí y no en `*`: al cambiar de tema cambian decenas de propiedades a la
+     vez y animarlas todas cuesta más de lo que aporta. */
   transition: background 0.4s var(--easing), color 0.4s var(--easing);
 }
 
-body {
-  min-height: 100%;
-}
+body { min-height: 100%; }
 
 h1, h2, h3, h4 {
   font-family: var(--font-display);
@@ -123,7 +105,6 @@ a { color: inherit; text-decoration: none; }
 
 ::selection { background: var(--accent); color: var(--on-accent); }
 
-/* Reduced motion: respect it everywhere */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -133,9 +114,8 @@ a { color: inherit; text-decoration: none; }
   }
 }
 
-/* Shared "code comment" eyebrow label used by every section instead of
-   numbered 01/02/03 badges — it names the section the way a dev names a
-   block of code, which is the actual signature of this design. */
+/* Etiqueta de sección compartida: nombra el bloque como lo haría un
+   comentario de código, en vez de un 01/02/03. */
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -160,7 +140,7 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--font-mono);
   font-size: 0.9rem;
   padding: 0.9em 1.6em;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-edge);
   border-radius: 2px;
   color: var(--ink);
   background: transparent;

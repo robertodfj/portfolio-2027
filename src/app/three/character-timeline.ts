@@ -3,18 +3,15 @@ import { CAMERA, DESK, MOTORBIKE, WALK } from './narrative.config';
 import { SectionRange } from './scroll-progress.service';
 
 /**
- * TIMELINE — todas las funciones PURAS de scrollProgress viven aquí.
+ * Timeline: todas las funciones puras de scrollProgress.
  *
- *   scrollProgress ──> walkBlend   (mezcla Idle/Walking)
- *                 ──> walkPhase    (fotograma del clip Walking, [0,1))
- *                 ──> position     (X derivada del scroll)
- *                 ──> rotationY
- *                 ──> cámara
+ *   progress ──> walkBlend (mezcla Idle/Walking)
+ *           ──> walkPhase (fotograma del clip)
+ *           ──> position / rotationY / cámara
  *
- * No hay estado interno, ni tiempo transcurrido, ni acumuladores: el mismo
- * `progress` produce SIEMPRE exactamente el mismo resultado. De ahí sale la
- * reversibilidad perfecta al hacer scroll hacia arriba — no es una animación
- * "de vuelta", es literalmente la misma función evaluada al revés.
+ * Sin estado interno ni acumuladores: el mismo progress da siempre el mismo
+ * resultado. De ahí sale que subir el scroll deshaga el recorrido exacto — no
+ * es una animación de vuelta, es la misma función evaluada al revés.
  */
 
 /**
@@ -142,22 +139,12 @@ export function evaluateTimeline(
 }
 
 /**
- * Presencia [0,1] de la moto, con los dos extremos anclados a cosas distintas
- * a propósito:
+ * Presencia [0,1] de la moto. Los dos extremos cuelgan de cosas distintas a
+ * propósito: la ENTRADA del personaje (arranca en cuanto sale de cuadro, para
+ * no dejar hueco muerto) y la SALIDA de la sección SIGUIENTE, para que no
+ * quede rastro cuando se llega al título de experiencia.
  *
- *   ENTRADA -> al personaje. Arranca en cuanto termina de salir del cuadro,
- *              así no queda hueco muerto entre que él se va y ella llega.
- *   SALIDA  -> a la SIGUIENTE sección (#experience): desaparece
- *              EXIT_LEAD_VH antes de que su título entre en pantalla, no
- *              cuando "Más allá del código" se va — así ya no queda ni rastro
- *              de la moto para cuando el usuario llega al título siguiente.
- *
- * Igual de pura y reversible que el timeline del personaje: el mismo
- * `progress` da siempre el mismo valor, así que al subir se deshace idéntico.
- *
- * `exitLeadProgress`/`exitFadeProgress` llegan ya convertidos de vh a
- * progress (ver ScrollProgressService.vhToProgress) — igual que
- * TimelineContext, es lo único que esta función no puede saber por sí misma.
+ * Tan pura y reversible como el resto del timeline.
  */
 export function motorbikePresence(
   progress: number,
@@ -212,6 +199,8 @@ export interface DeskSample {
   walkPhase: number;
   /** Peso de Typing (1 - walkBlend, ya sentado se queda fijo a 1). */
   typingBlend: number;
+  /** Fracción del fragmento de código ya escrito en la pantalla, [0,1]. */
+  typingProgress: number;
   cameraPosition: THREE.Vector3;
   cameraLookAt: THREE.Vector3;
 }
@@ -226,6 +215,7 @@ export function createDeskSample(): DeskSample {
     walkBlend: 0,
     walkPhase: 0,
     typingBlend: 0,
+    typingProgress: 0,
     cameraPosition: new THREE.Vector3(),
     cameraLookAt: new THREE.Vector3(),
   };
@@ -236,15 +226,48 @@ const deskCamPos = new THREE.Vector3();
 const deskCamLook = new THREE.Vector3();
 
 /**
- * Evalúa la fase "escritorio": caminar hasta la silla, sentarse (fundido
- * Walking -> Typing) y, a partir de ahí, una ruta de cámara + giro sutil del
- * personaje de 3 anclas (llegada / tecnologías / contacto). Tan pura como
- * `evaluateTimeline`: mismo `progress` -> mismo resultado siempre, así que es
- * tan reversible como el resto del narrativo, sin ningún caso especial.
+ * Interpola la cámara ORBITANDO alrededor de `center` en vez de en línea
+ * recta. Entre dos anclas situadas a lados opuestos del escritorio, una
+ * interpolación lineal mete la cámara por dentro del personaje y del mueble;
+ * girando el ángulo y la distancia por separado, el trayecto rodea la escena.
+ */
+function orbitLerp(
+  from: THREE.Vector3,
+  to: THREE.Vector3,
+  center: THREE.Vector3,
+  t: number,
+  out: THREE.Vector3,
+): void {
+  const fromAngle = Math.atan2(from.z - center.z, from.x - center.x);
+  const toAngle = Math.atan2(to.z - center.z, to.x - center.x);
+
+  // Siempre por el camino corto: sin esto una diferencia de 200° daría la
+  // vuelta larga y la cámara cruzaría media escena de más.
+  let delta = toAngle - fromAngle;
+  while (delta > Math.PI) delta -= Math.PI * 2;
+  while (delta < -Math.PI) delta += Math.PI * 2;
+
+  const angle = fromAngle + delta * t;
+  const radius = THREE.MathUtils.lerp(
+    Math.hypot(from.x - center.x, from.z - center.z),
+    Math.hypot(to.x - center.x, to.z - center.z),
+    t,
+  );
+
+  out.set(
+    center.x + Math.cos(angle) * radius,
+    THREE.MathUtils.lerp(from.y, to.y, t),
+    center.z + Math.sin(angle) * radius,
+  );
+}
+
+/**
+ * Fase escritorio: caminar hasta la silla, sentarse (fundido Walking->Typing)
+ * y una ruta de cámara de tres anclas (llegada, tecnologías, contacto). Tan
+ * pura y reversible como evaluateTimeline.
  *
- * `fromCameraPosition/LookAt` es la cámara de la fase 1 EN ESE MISMO frame
- * (ya congelada tras la salida del personaje): el punto de partida del primer
- * tramo de esta ruta, para que el relevo de cámara no dé un salto.
+ * `fromCamera*` es la cámara de la fase 1 en ese mismo frame: el punto de
+ * partida del relevo, para que no dé un salto.
  */
 export function evaluateDesk(
   progress: number,
@@ -282,6 +305,11 @@ export function evaluateDesk(
   out.walkBlend = 1 - sitBlend;
   out.typingBlend = sitBlend;
 
+  // El código termina de escribirse justo al llegar a contacto, para que el
+  // scroll del tramo sentado tenga algo que ir revelando.
+  const typingEnd = ctx.contactTop > arrivalProgress ? ctx.contactTop : arrivalProgress + span;
+  out.typingProgress = clamp01((progress - arrivalProgress) / (typingEnd - arrivalProgress));
+
   // --- 5. Ruta de 3 anclas (llegada -> tecnologías -> contacto): cámara y
   //        giro del conjunto. Se evalúa siempre; el giro solo se aplica una
   //        vez sentado, y antes de la llegada vale 0 de forma natural
@@ -292,13 +320,13 @@ export function evaluateDesk(
 
   if (ctx.techTop > arrivalProgress) {
     const t1 = smoothstep(arrivalProgress, ctx.techTop, progress);
-    deskCamPos.lerpVectors(DESK.CAMERA_POSITION, DESK.TECH_CAMERA_POSITION, t1);
+    orbitLerp(DESK.CAMERA_POSITION, DESK.TECH_CAMERA_POSITION, DESK.SEAT, t1, deskCamPos);
     deskCamLook.lerpVectors(DESK.CAMERA_LOOK_AT, DESK.TECH_CAMERA_LOOK_AT, t1);
     yaw = THREE.MathUtils.lerp(0, DESK.TECH_YAW, t1);
 
     if (ctx.contactTop > ctx.techTop) {
       const t2 = smoothstep(ctx.techTop, ctx.contactTop, progress);
-      deskCamPos.lerp(DESK.CONTACT_CAMERA_POSITION, t2);
+      orbitLerp(deskCamPos.clone(), DESK.CONTACT_CAMERA_POSITION, DESK.SEAT, t2, deskCamPos);
       deskCamLook.lerp(DESK.CONTACT_CAMERA_LOOK_AT, t2);
       yaw = THREE.MathUtils.lerp(yaw, DESK.CONTACT_YAW, t2);
     }

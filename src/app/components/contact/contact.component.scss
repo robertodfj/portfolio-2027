@@ -42,3 +42,80 @@
     color: var(--ink-faint);
   }
 }
+
+/* Terminal de contacto. La sección ya usaba tipografía mono y el cursor
+   parpadeante del logo; esto lo lleva hasta el final. */
+.terminal {
+  width: min(100%, 34rem);
+  margin-bottom: 2.5rem;
+  border: 1px solid var(--control-edge);
+  border-radius: 8px;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  overflow: hidden;
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.75rem;
+    background: var(--surface-soft);
+    border-bottom: 1px solid var(--edge);
+
+    span {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--ink-faint);
+    }
+
+    em {
+      margin-left: 0.5rem;
+      font-style: normal;
+      font-size: 0.68rem;
+      color: var(--ink-faint);
+    }
+  }
+
+  &__output {
+    padding: 0.9rem 0.85rem 0.3rem;
+    min-height: 5.5rem;
+
+    p {
+      margin: 0 0 0.35rem;
+      color: var(--ink-dim);
+      font-size: 0.76rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+  }
+
+  &__echo { color: var(--accent) !important; }
+
+  &__form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.85rem 0.85rem;
+  }
+
+  &__prompt { color: var(--accent); }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    padding: 0;
+
+    &::placeholder { color: var(--ink-faint); }
+    &:focus { outline: none; }
+    /* El foco se marca en la caja entera, que es lo que se ve. */
+    &:focus-visible { outline: none; }
+  }
+
+  &:focus-within { border-color: var(--accent); }
+}

@@ -6,26 +6,10 @@ import { SCROLL } from './narrative.config';
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * ÚNICA fuente de verdad del scroll: expone un `scrollProgress` normalizado
- * en [0, 1].
+ * Anclajes de una sección del DOM, en el mismo progress global [0,1].
  *
- * Un solo ScrollTrigger, un solo listener. No mantiene rAF propio: el render
- * loop de Three.js le pide una muestra por frame vía `sample(delta)`, con lo
- * que el cálculo del scroll y el bucle de render quedan desacoplados pero
- * perfectamente en fase.
- *
- * Nota sobre el suavizado: es un acercamiento exponencial al valor real de
- * ScrollTrigger, independiente del framerate. Nunca sobrepasa el objetivo
- * (no hay inercia ni muelle), así que la animación jamás se adelanta al
- * scroll, y el snap por epsilon garantiza que al detenerse el scroll el
- * timeline se para en seco en el valor exacto.
- */
-/**
- * Anclajes de una sección del DOM, en el MISMO scrollProgress global.
- *
- * Hacen falta los tres porque con secciones de 100vh seguidas, `enter` cae en
- * progress 0 y no sirve para nada: lo que marca "el usuario está viendo esta
- * sección" es `top`.
+ * Hacen falta los tres porque con secciones de 100vh seguidas `enter` cae en
+ * progress 0 y no sirve: lo que marca "se está viendo esta sección" es `top`.
  */
 export interface SectionRange {
   /** Su borde superior asoma por abajo del viewport. */
@@ -36,6 +20,16 @@ export interface SectionRange {
   leave: number;
 }
 
+/**
+ * Única fuente de verdad del scroll: un progress normalizado en [0,1].
+ *
+ * Un solo ScrollTrigger y un solo listener. No mantiene su propio rAF: el
+ * bucle de render le pide una muestra por frame con sample(delta), así que
+ * scroll y render van en fase sin acoplarse.
+ *
+ * El suavizado es un acercamiento exponencial independiente del framerate.
+ * Nunca sobrepasa el objetivo, así que la animación no se adelanta al scroll.
+ */
 @Injectable({ providedIn: 'root' })
 export class ScrollProgressService implements OnDestroy {
   /** Valor crudo que escribe ScrollTrigger. */
@@ -44,11 +38,7 @@ export class ScrollProgressService implements OnDestroy {
   private current = 0;
   private trigger?: ScrollTrigger;
 
-  /**
-   * Secciones cuyo tramo se mide del DOM. No son un segundo sistema de
-   * scroll: solo traducen "dónde está esta sección" al mismo eje [0,1] que ya
-   * usa todo lo demás, para que nadie tenga que hardcodear progresos.
-   */
+  /** Traducen "dónde está esta sección" al mismo eje [0,1] que todo lo demás. */
   private readonly sections = new Map<string, { selector: string; range: SectionRange }>();
 
   /** Viewport y recorrido total en px, cacheados en cada medida — base de vhToProgress(). */
@@ -120,11 +110,9 @@ export class ScrollProgressService implements OnDestroy {
   }
 
   /**
-   * Convierte una distancia en vh (alturas de viewport) a la MISMA unidad de
-   * progress [0,1] que usa todo lo demás — para anclar cosas como "N vh antes
-   * de tal sección" sin hardcodear un progress que dependería de cuánto mida
-   * la página. 0 mientras el layout no se haya medido todavía (antes del
-   * primer refresh de ScrollTrigger).
+   * Pasa una distancia en vh a la misma unidad de progress, para poder anclar
+   * "N vh antes de tal sección" sin depender de cuánto mida la página.
+   * Devuelve 0 mientras el layout no se haya medido.
    */
   vhToProgress(vh: number): number {
     if (this.scrollablePx <= 0) return 0;

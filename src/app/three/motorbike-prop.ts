@@ -5,21 +5,12 @@ import { MOTORBIKE } from './narrative.config';
 /**
  * La moto de la sección "Más allá del código".
  *
- * Dos ejes bien separados:
- *   - PRESENCIA  -> la manda el scroll (entra y sale con la sección).
- *   - GIRO       -> lo manda el reloj (gira siempre), modulado por el ratón:
- *                   más lento con el puntero encima, con un impulso extra en
- *                   cada clic. Es la única parte de la clase que reacciona al
- *                   ratón — el resto sigue siendo scroll puro.
+ * Dos ejes separados: la PRESENCIA la manda el scroll (entra y sale con la
+ * sección) y el GIRO lo manda el ratón — casi parada por defecto, girando
+ * mientras el puntero está encima.
  *
- * Jerarquía interna:
- *   root     posición/escala en mundo, la presencia escala aquí
- *    └ spin  rotación continua sobre el eje Y
- *       ├ inner  el GLB, desplazado para que su centro caiga en el origen
- *       │        del pivote — sin esto la moto orbitaría en vez de girar.
- *       └ rider  (opcional) Roberto montado — hermano de `inner` en el MISMO
- *                espacio local, así que hereda automáticamente el giro, la
- *                presencia y la inclinación de la moto sin código adicional.
+ * Jerarquía: root (posición/escala) > spin (giro) > inner (el GLB, recentrado
+ * sobre el pivote) + rider (opcional, hermano de inner, así que hereda todo).
  */
 export class MotorbikeProp {
   readonly root = new THREE.Group();
@@ -32,10 +23,8 @@ export class MotorbikeProp {
 
   /** Ángulo acumulado del giro — ver comentario en update(). */
   private spinAngle = 0;
-  /** Fracción actual de SPIN_SPEED, suavizada hacia 1 o hacia HOVER_SPEED_SCALE. */
-  private speedScale = 1;
-  /** Velocidad angular extra (rad/s) que deja un clic, decayendo con fricción. */
-  private kickVelocity = 0;
+  /** Velocidad angular actual, suavizada entre la de reposo y la de hover. */
+  private spinSpeed = MOTORBIKE.IDLE_SPIN_SPEED;
   private hovered = false;
 
   constructor(inner: THREE.Group, renderer: THREE.WebGLRenderer) {
@@ -167,34 +156,22 @@ export class MotorbikeProp {
     return this.hovered;
   }
 
-  /** Añade impulso de giro. Varios clics seguidos se suman (con fricción). */
-  kick(): void {
-    this.kickVelocity += MOTORBIKE.CLICK_KICK;
-  }
-
   /**
    * Giro. Solo corre mientras la moto está en escena.
    *
-   * Único sitio de esta clase donde se acumula estado frame a frame en vez
-   * de derivarse de un valor absoluto: antes de que la velocidad pudiera
-   * cambiar por hover/clic, `rotation.y = elapsed * SPIN_SPEED` bastaba (una
-   * función pura del reloj). En cuanto la velocidad varía con la
-   * interacción, ya no hay ningún "elapsed" único del que recalcular el
-   * ángulo sin memoria — es, literalmente, un volante físico: hay que
-   * integrar la velocidad para saber dónde ha quedado.
+   * Es el único sitio de la clase que acumula estado frame a frame: como la
+   * velocidad depende del ratón, no hay un "elapsed" del que sacar el ángulo
+   * sin memoria y hay que integrar la velocidad.
    */
   update(delta: number): void {
     if (this.presence <= 0.001) return;
 
-    // Acercamiento exponencial a la velocidad objetivo — nunca un salto.
-    const targetScale = this.hovered ? MOTORBIKE.HOVER_SPEED_SCALE : 1;
-    const k = 1 - Math.exp(-MOTORBIKE.HOVER_EASE * delta);
-    this.speedScale += (targetScale - this.speedScale) * k;
+    // Acercamiento exponencial a la velocidad objetivo: al entrar el puntero
+    // arranca progresivamente y al salir frena, nunca de golpe.
+    const target = this.hovered ? MOTORBIKE.HOVER_SPIN_SPEED : MOTORBIKE.IDLE_SPIN_SPEED;
+    this.spinSpeed += (target - this.spinSpeed) * (1 - Math.exp(-MOTORBIKE.HOVER_EASE * delta));
 
-    // El impulso del clic se disipa solo — un empujón, no un interruptor.
-    this.kickVelocity *= Math.exp(-MOTORBIKE.KICK_FRICTION * delta);
-
-    this.spinAngle += (MOTORBIKE.SPIN_SPEED * this.speedScale + this.kickVelocity) * delta;
+    this.spinAngle += this.spinSpeed * delta;
     this.spin.rotation.y = this.spinAngle;
   }
 

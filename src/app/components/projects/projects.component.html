@@ -48,6 +48,7 @@
           let i = index
         "
         class="project-card"
+        [attr.aria-hidden]="isClone(i) ? 'true' : null"
         [class.project-card--active]="
           activeIndex() ===
           (i % projects.length)
@@ -114,6 +115,7 @@
             *ngIf="!p.isPrivate && p.githubUrl"
             class="project-card__gh"
             [href]="p.githubUrl"
+            [attr.tabindex]="isClone(i) ? -1 : null"
             target="_blank"
             rel="noopener noreferrer"
             [attr.aria-label]="'projects.code' | translate"
@@ -146,6 +148,7 @@
               type="button"
               class="project-card__gh project-card__gh--locked"
               disabled
+              [attr.tabindex]="isClone(i) ? -1 : null"
               [attr.aria-label]="'projects.private' | translate"
             >
               <svg
@@ -186,6 +189,7 @@
             *ngIf="p.demoUrl"
             class="btn btn--solid"
             [href]="p.demoUrl"
+            [attr.tabindex]="isClone(i) ? -1 : null"
             target="_blank"
             rel="noopener noreferrer"
           >

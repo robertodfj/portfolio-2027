@@ -1,5 +1,6 @@
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   ViewChild,
@@ -12,18 +13,16 @@ import { revealOnScroll } from '../../shared/reveal.util';
 
 interface Project {
   /**
-   * Índice corto de la tarjeta Y clave de traducción a la vez: los textos
-   * viven en los JSON de i18n bajo projects.items.<index>. Reutilizarlo evita
-   * mantener dos identificadores en paralelo para lo mismo.
+   * Índice corto de la tarjeta y clave de traducción a la vez: los textos
+   * viven en los JSON de i18n bajo projects.items.<index>.
    */
   index: string;
   icon?: string;
   stack: string[];
   /**
-   * Repositorio privado. Cuando es true la tarjeta muestra el botón de
-   * GitHub bloqueado (candado + aviso al pasar el ratón) e ignora
-   * githubUrl: basta cambiar este flag para abrir o cerrar el código
-   * de un proyecto.
+   * Repositorio privado. Con true la tarjeta muestra el botón de GitHub
+   * bloqueado y se ignora githubUrl, así que abrir o cerrar el código de un
+   * proyecto es cambiar este flag.
    */
   isPrivate: boolean;
   githubUrl?: string;
@@ -32,7 +31,7 @@ interface Project {
 
 @Component({
   selector: 'app-projects',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, TranslateModule],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss',
@@ -54,8 +53,7 @@ export class ProjectsComponent implements AfterViewInit {
       icon: '🍽️',
       stack: ['Java', 'Android Studio', 'Room', 'LiveData'],
       isPrivate: false,
-      githubUrl:
-        'https://github.com/robertodfj/meseroAPP-Proyecto-Intermodular',
+      githubUrl: 'https://github.com/robertodfj/meseroAPP-Proyecto-Intermodular',
     },
     {
       index: 'mw',
@@ -87,19 +85,13 @@ export class ProjectsComponent implements AfterViewInit {
     },
   ];
 
-  /*
-   * Repetimos los proyectos 3 veces.
-   *
-   * La vista empieza en la copia central.
-   * Cuando llegamos a una de las copias exteriores,
-   * recolocamos el scroll en la copia central sin que
-   * el usuario perciba el salto.
+  /**
+   * Tres copias de la lista. La vista arranca en la del medio y, al llegar a
+   * una de las exteriores, se recoloca el scroll en la central sin que se note
+   * el salto. Las copias exteriores van marcadas aria-hidden en la plantilla
+   * para que un lector de pantalla no lea los proyectos tres veces.
    */
-  readonly carouselProjects = [
-    ...this.projects,
-    ...this.projects,
-    ...this.projects,
-  ];
+  readonly carouselProjects = [...this.projects, ...this.projects, ...this.projects];
 
   readonly activeIndex = signal(0);
 
@@ -112,10 +104,7 @@ export class ProjectsComponent implements AfterViewInit {
   constructor(private el: ElementRef<HTMLElement>) {}
 
   ngAfterViewInit(): void {
-    revealOnScroll(
-      this.el.nativeElement,
-      '[data-reveal-project]'
-    );
+    revealOnScroll(this.el.nativeElement, '[data-reveal-project]');
 
     requestAnimationFrame(() => {
       this.goToPhysicalIndex(this.projects.length, false);
@@ -123,476 +112,153 @@ export class ProjectsComponent implements AfterViewInit {
     });
   }
 
-  /*
-   * Índice físico dentro de las 3 copias.
-   */
-  private getCard(index: number): HTMLElement | null {
-    const track = this.trackRef.nativeElement;
-
-    return track.children[index] as HTMLElement | null;
+  /** true si la tarjeta es una de las copias, no la lista real. */
+  isClone(i: number): boolean {
+    return i < this.projects.length || i >= this.projects.length * 2;
   }
 
-  /*
-   * Lleva una tarjeta al centro de la pantalla.
-   */
-  private getTargetScroll(index: number): number {
-    const track = this.trackRef.nativeElement;
-    const card = this.getCard(index);
+  next(): void {
+    this.step(1);
+  }
 
-    if (!card) {
-      return track.scrollLeft;
+  prev(): void {
+    this.step(-1);
+  }
+
+  /** Click en los puntos: siempre se navega a la copia central. */
+  scrollToIndex(index: number): void {
+    this.goToPhysicalIndex(this.projects.length + index, true);
+  }
+
+  onTrackScroll(): void {
+    if (!this.initialized) return;
+
+    cancelAnimationFrame(this.scrollRaf);
+    this.scrollRaf = requestAnimationFrame(() => {
+      const closest = this.closestCardIndex();
+      if (closest < 0) return;
+
+      this.activeIndex.set(this.normalizeIndex(closest));
+      this.recenterIfOnOuterCopy(closest);
+    });
+  }
+
+  onPointerDown(event: PointerEvent): void {
+    const track = this.trackRef.nativeElement;
+
+    this.dragging = true;
+    this.startX = event.clientX;
+    this.startScrollLeft = track.scrollLeft;
+
+    track.setPointerCapture(event.pointerId);
+    track.classList.add('is-dragging');
+  }
+
+  onPointerMove(event: PointerEvent): void {
+    if (!this.dragging) return;
+
+    const track = this.trackRef.nativeElement;
+    track.scrollLeft = this.startScrollLeft - (event.clientX - this.startX);
+  }
+
+  onPointerUp(event: PointerEvent): void {
+    this.endDrag(event);
+  }
+
+  onPointerCancel(event: PointerEvent): void {
+    this.endDrag(event);
+  }
+
+  /** Inclinación muy sutil de la tarjeta bajo el ratón. */
+  onTilt(event: MouseEvent): void {
+    if (this.dragging) return;
+
+    const card = event.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width;
+    const py = (event.clientY - rect.top) / rect.height;
+
+    card.style.setProperty('--rx', `${(0.5 - py) * 2}deg`);
+    card.style.setProperty('--ry', `${(px - 0.5) * 2.5}deg`);
+    card.style.setProperty('--mx', `${px * 100}%`);
+    card.style.setProperty('--my', `${py * 100}%`);
+  }
+
+  resetTilt(event: MouseEvent): void {
+    const card = event.currentTarget as HTMLElement;
+    card.style.setProperty('--rx', '0deg');
+    card.style.setProperty('--ry', '0deg');
+  }
+
+  /**
+   * Tarjeta cuyo centro cae más cerca del centro del carrusel. Es la pregunta
+   * que se hacen el scroll, las flechas y el soltar del arrastre, así que vive
+   * en un único sitio.
+   */
+  private closestCardIndex(): number {
+    const track = this.trackRef.nativeElement;
+    const cards = Array.from(track.children) as HTMLElement[];
+    if (!cards.length) return -1;
+
+    const center = track.scrollLeft + track.clientWidth / 2;
+    const distanceTo = (card: HTMLElement) =>
+      Math.abs(card.offsetLeft + card.offsetWidth / 2 - center);
+
+    let closest = 0;
+    for (let i = 1; i < cards.length; i++) {
+      if (distanceTo(cards[i]) < distanceTo(cards[closest])) closest = i;
+    }
+    return closest;
+  }
+
+  private step(direction: 1 | -1): void {
+    const closest = this.closestCardIndex();
+    if (closest < 0) return;
+    this.goToPhysicalIndex(closest + direction, true);
+  }
+
+  private endDrag(event: PointerEvent): void {
+    if (!this.dragging) return;
+
+    const track = this.trackRef.nativeElement;
+    this.dragging = false;
+    track.classList.remove('is-dragging');
+
+    if (track.hasPointerCapture(event.pointerId)) {
+      track.releasePointerCapture(event.pointerId);
     }
 
-    return (
-      card.offsetLeft +
-      card.offsetWidth / 2 -
-      track.clientWidth / 2
-    );
+    const closest = this.closestCardIndex();
+    if (closest >= 0) this.goToPhysicalIndex(closest, true);
   }
 
-  private goToPhysicalIndex(
-    index: number,
-    smooth = true
-  ): void {
+  private getTargetScroll(index: number): number {
     const track = this.trackRef.nativeElement;
+    const card = track.children[index] as HTMLElement | undefined;
+    if (!card) return track.scrollLeft;
 
-    track.scrollTo({
+    return card.offsetLeft + card.offsetWidth / 2 - track.clientWidth / 2;
+  }
+
+  private goToPhysicalIndex(index: number, smooth = true): void {
+    this.trackRef.nativeElement.scrollTo({
       left: this.getTargetScroll(index),
       behavior: smooth ? 'smooth' : 'auto',
     });
   }
 
-  /*
-   * Convierte el índice físico en el índice real.
-   *
-   * Ejemplo:
-   * 6 -> 0
-   * 7 -> 1
-   * 8 -> 2
-   */
+  /** Índice físico (0..17) a índice real (0..5). */
   private normalizeIndex(index: number): number {
     const length = this.projects.length;
-
-    return (
-      ((index % length) + length) % length
-    );
+    return ((index % length) + length) % length;
   }
 
-  /*
-   * Comprueba si estamos cerca de una copia exterior.
-   *
-   * Cuando ocurre, recolocamos el carrusel en la copia
-   * central equivalente.
-   */
-  private normalizeInfinitePosition(): void {
-    const track = this.trackRef.nativeElement;
-
-    const total = this.carouselProjects.length;
+  /** Si estamos en una copia exterior, salta a la equivalente de la central. */
+  private recenterIfOnOuterCopy(closest: number): void {
     const length = this.projects.length;
+    if (!this.isClone(closest)) return;
 
-    const cards = Array.from(
-      track.children
-    ) as HTMLElement[];
-
-    if (!cards.length) return;
-
-    const center =
-      track.scrollLeft +
-      track.clientWidth / 2;
-
-    let closest = 0;
-    let distance = Infinity;
-
-    cards.forEach((card, index) => {
-      const cardCenter =
-        card.offsetLeft +
-        card.offsetWidth / 2;
-
-      const d = Math.abs(
-        cardCenter - center
-      );
-
-      if (d < distance) {
-        distance = d;
-        closest = index;
-      }
-    });
-
-    /*
-     * Si estamos en la primera copia,
-     * saltamos a la copia central.
-     */
-    if (closest < length) {
-      const equivalent =
-        closest + length;
-
-      track.scrollLeft =
-        this.getTargetScroll(equivalent);
-
-      return;
-    }
-
-    /*
-     * Si estamos en la tercera copia,
-     * saltamos a la copia central.
-     */
-    if (closest >= length * 2) {
-      const equivalent =
-        closest - length;
-
-      track.scrollLeft =
-        this.getTargetScroll(equivalent);
-    }
-
-    /*
-     * total se utiliza para mantener claro que
-     * trabajamos con un carrusel circular.
-     */
-    void total;
-  }
-
-  /*
-   * Actualiza la tarjeta activa.
-   */
-  onTrackScroll(): void {
-    if (!this.initialized) return;
-
-    if (this.scrollRaf) {
-      cancelAnimationFrame(this.scrollRaf);
-    }
-
-    this.scrollRaf =
-      requestAnimationFrame(() => {
-        const track =
-          this.trackRef.nativeElement;
-
-        const cards = Array.from(
-          track.children
-        ) as HTMLElement[];
-
-        if (!cards.length) return;
-
-        const center =
-          track.scrollLeft +
-          track.clientWidth / 2;
-
-        let closest = 0;
-        let distance = Infinity;
-
-        cards.forEach((card, index) => {
-          const cardCenter =
-            card.offsetLeft +
-            card.offsetWidth / 2;
-
-          const d = Math.abs(
-            cardCenter - center
-          );
-
-          if (d < distance) {
-            distance = d;
-            closest = index;
-          }
-        });
-
-        this.activeIndex.set(
-          this.normalizeIndex(closest)
-        );
-
-        this.normalizeInfinitePosition();
-      });
-  }
-
-  /*
-   * Siguiente proyecto.
-   */
-  next(): void {
-    const track =
-      this.trackRef.nativeElement;
-
-    const cards = Array.from(
-      track.children
-    ) as HTMLElement[];
-
-    if (!cards.length) return;
-
-    const center =
-      track.scrollLeft +
-      track.clientWidth / 2;
-
-    let closest = 0;
-    let distance = Infinity;
-
-    cards.forEach((card, index) => {
-      const cardCenter =
-        card.offsetLeft +
-        card.offsetWidth / 2;
-
-      const d = Math.abs(
-        cardCenter - center
-      );
-
-      if (d < distance) {
-        distance = d;
-        closest = index;
-      }
-    });
-
-    this.goToPhysicalIndex(
-      closest + 1,
-      true
-    );
-  }
-
-  /*
-   * Proyecto anterior.
-   */
-  prev(): void {
-    const track =
-      this.trackRef.nativeElement;
-
-    const cards = Array.from(
-      track.children
-    ) as HTMLElement[];
-
-    if (!cards.length) return;
-
-    const center =
-      track.scrollLeft +
-      track.clientWidth / 2;
-
-    let closest = 0;
-    let distance = Infinity;
-
-    cards.forEach((card, index) => {
-      const cardCenter =
-        card.offsetLeft +
-        card.offsetWidth / 2;
-
-      const d = Math.abs(
-        cardCenter - center
-      );
-
-      if (d < distance) {
-        distance = d;
-        closest = index;
-      }
-    });
-
-    this.goToPhysicalIndex(
-      closest - 1,
-      true
-    );
-  }
-
-  /*
-   * Click en los puntos.
-   *
-   * Siempre navegamos a la copia central.
-   */
-  scrollToIndex(index: number): void {
-    const physicalIndex =
-      this.projects.length + index;
-
-    this.goToPhysicalIndex(
-      physicalIndex,
-      true
-    );
-  }
-
-  /*
-   * Inicio del drag.
-   */
-  onPointerDown(event: PointerEvent): void {
-    const track =
-      this.trackRef.nativeElement;
-
-    this.dragging = true;
-
-    this.startX = event.clientX;
-    this.startScrollLeft =
-      track.scrollLeft;
-
-    track.setPointerCapture(
-      event.pointerId
-    );
-
-    track.classList.add(
-      'is-dragging'
-    );
-  }
-
-  /*
-   * Movimiento del drag.
-   */
-  onPointerMove(event: PointerEvent): void {
-    if (!this.dragging) return;
-
-    const track =
-      this.trackRef.nativeElement;
-
-    const distance =
-      event.clientX - this.startX;
-
-    track.scrollLeft =
-      this.startScrollLeft - distance;
-  }
-
-  /*
-   * Fin del drag.
-   */
-  onPointerUp(event: PointerEvent): void {
-    if (!this.dragging) return;
-
-    const track =
-      this.trackRef.nativeElement;
-
-    this.dragging = false;
-
-    track.classList.remove(
-      'is-dragging'
-    );
-
-    if (
-      track.hasPointerCapture(
-        event.pointerId
-      )
-    ) {
-      track.releasePointerCapture(
-        event.pointerId
-      );
-    }
-
-    this.snapToClosest();
-  }
-
-  onPointerCancel(
-    event: PointerEvent
-  ): void {
-    if (!this.dragging) return;
-
-    const track =
-      this.trackRef.nativeElement;
-
-    this.dragging = false;
-
-    track.classList.remove(
-      'is-dragging'
-    );
-
-    if (
-      track.hasPointerCapture(
-        event.pointerId
-      )
-    ) {
-      track.releasePointerCapture(
-        event.pointerId
-      );
-    }
-
-    this.snapToClosest();
-  }
-
-  /*
-   * Al soltar, busca la tarjeta más cercana
-   * y la centra suavemente.
-   */
-  private snapToClosest(): void {
-    const track =
-      this.trackRef.nativeElement;
-
-    const cards = Array.from(
-      track.children
-    ) as HTMLElement[];
-
-    if (!cards.length) return;
-
-    const center =
-      track.scrollLeft +
-      track.clientWidth / 2;
-
-    let closest = 0;
-    let distance = Infinity;
-
-    cards.forEach((card, index) => {
-      const cardCenter =
-        card.offsetLeft +
-        card.offsetWidth / 2;
-
-      const d = Math.abs(
-        cardCenter - center
-      );
-
-      if (d < distance) {
-        distance = d;
-        closest = index;
-      }
-    });
-
-    this.goToPhysicalIndex(
-      closest,
-      true
-    );
-  }
-
-  /*
-   * Tilt muy sutil.
-   */
-  onTilt(event: MouseEvent): void {
-    if (this.dragging) return;
-
-    const card =
-      event.currentTarget as HTMLElement;
-
-    const rect =
-      card.getBoundingClientRect();
-
-    const px =
-      (event.clientX - rect.left) /
-      rect.width;
-
-    const py =
-      (event.clientY - rect.top) /
-      rect.height;
-
-    const rx =
-      (0.5 - py) * 2;
-
-    const ry =
-      (px - 0.5) * 2.5;
-
-    card.style.setProperty(
-      '--rx',
-      `${rx}deg`
-    );
-
-    card.style.setProperty(
-      '--ry',
-      `${ry}deg`
-    );
-
-    card.style.setProperty(
-      '--mx',
-      `${px * 100}%`
-    );
-
-    card.style.setProperty(
-      '--my',
-      `${py * 100}%`
-    );
-  }
-
-  resetTilt(event: MouseEvent): void {
-    const card =
-      event.currentTarget as HTMLElement;
-
-    card.style.setProperty(
-      '--rx',
-      '0deg'
-    );
-
-    card.style.setProperty(
-      '--ry',
-      '0deg'
-    );
+    const equivalent = closest < length ? closest + length : closest - length;
+    this.trackRef.nativeElement.scrollLeft = this.getTargetScroll(equivalent);
   }
 }

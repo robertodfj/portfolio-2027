@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { LanguageService } from '../../shared/language.service';
 
@@ -10,8 +10,8 @@ import { LanguageService } from '../../shared/language.service';
  */
 @Component({
   selector: 'app-language-picker',
-  standalone: true,
   imports: [TranslateModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './language-picker.component.html',
   styleUrl: './language-picker.component.scss',
 })

@@ -5,32 +5,38 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development"
+    "watch": "ng build --watch --configuration development",
+    "gen:fonts": "node scripts/fonts.js",
+    "gen:og": "node scripts/og-image.js",
+    "gen:favicon": "node scripts/favicon.js",
+    "opt:models": "gltf-transform optimize src/assets/models/motorbike.glb src/assets/models/motorbike.glb --texture-size 1024 --texture-compress webp --compress draco"
   },
   "private": true,
   "dependencies": {
-    "@angular/animations": "^18.2.0",
-    "@angular/common": "^18.2.0",
-    "@angular/compiler": "^18.2.0",
-    "@angular/core": "^18.2.0",
-    "@angular/forms": "^18.2.0",
-    "@angular/platform-browser": "^18.2.0",
-    "@angular/platform-browser-dynamic": "^18.2.0",
-    "@angular/router": "^18.2.0",
+    "@angular/animations": "^20.3.30",
+    "@angular/common": "^20.3.30",
+    "@angular/compiler": "^20.3.30",
+    "@angular/core": "^20.3.30",
+    "@angular/forms": "^20.3.30",
+    "@angular/platform-browser": "^20.3.30",
+    "@angular/platform-browser-dynamic": "^20.3.30",
+    "@angular/router": "^20.3.30",
     "@ngx-translate/core": "^15.0.0",
     "@ngx-translate/http-loader": "^8.0.0",
     "gsap": "^3.12.5",
     "rxjs": "~7.8.0",
     "three": "^0.166.0",
     "tslib": "^2.6.0",
-    "zone.js": "~0.14.10"
+    "zone.js": "~0.15.1"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^18.2.0",
-    "@angular/cli": "^18.2.0",
-    "@angular/compiler-cli": "^18.2.0",
+    "@angular-devkit/build-angular": "^20.3.36",
+    "@angular/cli": "^20.3.36",
+    "@angular/compiler-cli": "^20.3.30",
+    "@gltf-transform/cli": "^4.5.0",
     "@types/node": "^20.0.0",
     "@types/three": "^0.166.0",
-    "typescript": "~5.5.0"
+    "puppeteer-core": "^25.10.0",
+    "typescript": "~5.9.3"
   }
 }

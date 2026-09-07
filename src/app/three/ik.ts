@@ -1,33 +1,14 @@
 import * as THREE from 'three';
 
 /**
- * IK analítica de 2 huesos ("two-bone IK"), la misma técnica que usan los
- * rigs de Unity/Unreal para brazos y piernas. Se resuelve con geometría pura
- * (ley de cosenos) — nada de iteración, nada de convergencia, un único
- * cálculo determinista.
+ * IK analítica de dos huesos. Se resuelve por geometría (ley de cosenos), sin
+ * iteración: un único cálculo determinista. Pensada para posar UNA vez una
+ * pose estática (el jinete), así que no tiene coste por frame.
  *
- * Pensada para posarse UNA VEZ sobre una pose estática (el jinete de la
- * moto): no hay coste por frame, ni aquí ni en quien la llama.
+ * Las longitudes se miden de las posiciones actuales de los huesos, nunca
+ * hardcodeadas, así que se adapta sola si cambia el modelo.
  *
- * Cómo funciona, en 3 pasos:
- *   1. Mide las longitudes reales de los dos segmentos a partir de las
- *      posiciones ACTUALES de los huesos (nunca hardcodeadas: si el modelo
- *      cambia, la IK se adapta sola).
- *   2. Resuelve el triángulo (raíz, articulación media, objetivo) con la ley
- *      de cosenos para saber cuánto debe doblarse la articulación media.
- *   3. Gira cada hueso en espacio MUNDO con la rotación mínima que lleva su
- *      dirección actual a la dirección resuelta (swing puro, sin torsión
- *      añadida — apropiado para una pose fija, no para animación). La
- *      dirección de partida de CADA hueso se relee del estado real tras
- *      actualizar las matrices, en vez de recomponerla algebraicamente a
- *      partir de la rotación del padre: es la forma robusta de encadenar dos
- *      swings sin arrastrar un error de signo en la composición.
- *
- * `pole` desambigua hacia qué lado se dobla la articulación media (el codo o
- * la rodilla). Usar la posición ACTUAL de esa articulación en bind pose como
- * pole es un truco simple y robusto: el doblez resultante cae del mismo lado
- * hacia el que el rig ya se inclina de forma natural, sin tener que adivinar
- * a mano qué eje es "hacia fuera" en cada bone.
+ * `pole` decide hacia qué lado dobla el codo o la rodilla.
  */
 export function applyTwoBoneIK(
   root: THREE.Object3D,
@@ -81,10 +62,8 @@ export function applyTwoBoneIK(
   root.updateWorldMatrix(true, true);
 
   // --- Hueso medio: gira su dirección actual -> endDir (swing mínimo) -------
-  // `mid` todavía no ha girado por su cuenta, pero SÍ ha heredado el swing de
-  // `root` (la actualización de arriba ya propagó ese cambio a sus
-  // descendientes): basta con releer dónde ha quedado `end` respecto a `mid`
-  // ahora mismo, en vez de recomponer esa dirección a mano.
+  // mid ya ha heredado el swing de root, así que basta releer dónde ha quedado
+  // end respecto a mid en vez de recomponer esa dirección a mano.
   const currentDir2 = end
     .getWorldPosition(new THREE.Vector3())
     .sub(mid.getWorldPosition(new THREE.Vector3()))

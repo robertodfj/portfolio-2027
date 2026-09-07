@@ -3,6 +3,7 @@
 }
 
 .about {
+  position: relative;
   min-height: 100vh;
 
   display: flex;
@@ -238,4 +239,58 @@
       transform: none;
     }
   }
+}
+
+/* Aviso de que la moto responde al ratón. Se retira solo en cuanto el
+   visitante la descubre, así que no molesta al que ya lo sabe. */
+.about__bike-hint {
+  /* En el flujo y alineado a la derecha: cae a la altura de la moto sin
+     depender de dónde esté el scroll dentro de la sección. */
+  align-self: flex-end;
+  margin: 0 0 1.5rem;
+
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  /* Pastilla y no texto suelto: el aviso cae encima de la moto, y sin fondo
+     el texto oscuro sobre la rueda negra desaparece. */
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--edge-strong);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px var(--shadow-soft);
+
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+
+  transition: opacity 0.5s var(--easing), transform 0.5s var(--easing);
+
+  &--gone {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.about__bike-hint-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.7);
+  animation: bikeHintPulse 2s ease-in-out infinite;
+}
+
+@keyframes bikeHintPulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Sin ratón el aviso no aplica. */
+@media (max-width: 860px), (hover: none) {
+  .about__bike-hint { display: none; }
 }

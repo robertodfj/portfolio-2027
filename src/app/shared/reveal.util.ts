@@ -4,10 +4,11 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * Fades + lifts a group of elements into place as they enter the viewport.
- * Deliberately independent from the master narrative ScrollTrigger in
- * AnimationService — this one only affects text/UI opacity and transform,
- * never scroll position, so it can never fight native scrolling.
+ * Aparición de un grupo de elementos al entrar en pantalla.
+ *
+ * A propósito independiente del ScrollTrigger del narrativo: este solo toca
+ * opacidad y transform, nunca la posición del scroll, así que no puede
+ * pelearse con el scroll nativo.
  */
 export function revealOnScroll(host: HTMLElement, selector = '[data-reveal]'): void {
   const targets = host.querySelectorAll<HTMLElement>(selector);

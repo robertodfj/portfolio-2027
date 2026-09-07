@@ -1,27 +1,22 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { CodeScreen } from './code-screen';
+import { cssColorHex } from '../shared/browser.util';
 
 /**
- * Puesto de trabajo (mesa + silla gaming + MacBook + atrezo) de la escena
- * "programando", de #experience en adelante.
+ * Puesto de trabajo (mesa, silla, MacBook y atrezo) de la escena "programando".
  *
- * SISTEMA DE COORDENADAS — importante: este grupo se coloca EXACTAMENTE sobre
- * el root del personaje (misma posición, misma rotación, misma escala; ver
- * AnimationService), así que todo lo de aquí está en SU espacio local: y = 0 es
- * el suelo bajo sus pies, +Z es hacia donde mira y hacia donde salen sus
- * piernas, +X es su izquierda.
- *
- * Las medidas NO están puestas a ojo: se midieron sobre la pose REAL del clip
- * "Typing" en el navegador (hueso -> root.worldToLocal), y en ese espacio
- * 1 unidad ≈ 1 metro, así que además coinciden con medidas reales de mueble:
+ * Este grupo se coloca encima del root del personaje, así que todo va en SU
+ * espacio local: y = 0 es el suelo bajo sus pies, +Z hacia donde mira, +X su
+ * izquierda. Las medidas están tomadas sobre la pose real del clip "Typing",
+ * donde 1 unidad ≈ 1 metro:
  *
  *   cadera   y=0.564  z=0.019      rodillas  y=0.497  z=0.470
- *   muñecas  y=0.762  z=0.466      pies      y=0.100  z=0.450  (dedos y≈0)
+ *   muñecas  y=0.762  z=0.466      pies      y=0.100  z=0.450
  *   hombros  y≈1.01   z≈0.05       cabeza    y=1.197  z=0.130
  *
- * De ahí salen las alturas que mandan sobre todo lo demás: asiento a 0.47
- * (justo bajo la cadera), tablero a 0.725 y teclado del portátil justo bajo
- * los dedos, con las muñecas cayendo en el reposamuñecas.
+ * De ahí salen el asiento a 0.47 y el tablero a 0.725, con el teclado justo
+ * bajo sus dedos. No toques esas tres alturas sin volver a medir la pose.
  */
 
 /** ---------------------------------------------------------------------
@@ -38,53 +33,28 @@ const DESK = {
 
 const MB = {
   /**
-   * Un MacBook Air de 13" real mide 30.4 x 21.5 cm. Aquí va a 40 x 27.5, un
-   * ~30% por encima: a petición explícita ("el mac sale muy pequeño"). A la
-   * distancia de cámara de esta escena el tamaño real se leía como un
-   * accesorio diminuto; agrandarlo es la misma licencia que se toma cualquier
-   * bodegón de producto. Lo que NO se puede tocar es dónde cae el teclado:
-   * tiene que quedar bajo sus dedos, así que el portátil crece hacia ADELANTE
-   * (borde delantero más cerca de él) y hacia los lados, nunca desplazando la
-   * zona de tecleo.
+   * Un MacBook Air de 13" mide 30.4 x 21.5 cm; aquí va un 30 % más grande
+   * porque a esta distancia de cámara el tamaño real se lee como un accesorio
+   * diminuto. Crece hacia delante y hacia los lados, nunca desplazando la zona
+   * de tecleo: el teclado tiene que seguir cayendo bajo sus dedos.
    */
   W: 0.4,
   D: 0.275,
   CX: 0.1, // centrado entre sus dos manos (x: -0.013 y 0.209)
 
   /**
-   * Borde delantero. Retrasado 1.5 cm (≈2% del fondo de la mesa) a petición
-   * explícita: al teclear, los dedos atravesaban la pantalla.
+   * Borde delantero. Está medido sobre el clip "Typing", no puesto a ojo:
+   * muestreando el bucle 4 s, los huesos de los dedos llegan como máximo a
+   * z = 0.665. Con 0.45 el teclado ocupa de z=0.546 a 0.673, las puntas caen
+   * dentro de las teclas y la muñeca aterriza en el reposamuñecas.
    *
-   * No es un ajuste a ojo — está medido. Muestreando el bucle de "Typing"
-   * durante 4 s (corre en tiempo real, así que la mano NO está siempre donde
-   * la deja un único fotograma), los 32 huesos de mano y dedos alcanzan como
-   * máximo z = 0.6651 (RightHandMiddle3, a y = 0.827). Con FRONT_Z = 0.385 la
-   * bisagra caía en z = 0.660: los dedos se metían 5 mm dentro de la tapa en
-   * su parte baja, justo donde la pantalla aún no ha empezado a irse hacia
-   * atrás. Con 0.40 la bisagra queda en 0.675 y sobran ~9 mm en el punto más
-   * justo (arriba, donde la tapa ya se aleja, el margen sube a ~2.8 cm).
-   *
-   * SEGUNDA VUELTA (a petición: "échalo más para atrás"). 0.45 no es solo
-   * "otro poco": es la posición donde la geometría cuadra del todo. Con las
-   * proporciones de teclado corregidas (ver KEYS_*), el teclado ocupa de
-   * z=0.546 a z=0.673, y las puntas de los dedos barren de 0.628 a 0.665 —
-   * o sea que caen DENTRO de las teclas en vez de sobre el canto trasero,
-   * que es donde quedaban antes. Y la muñeca (z=0.477) aterriza a 2.7 cm del
-   * borde delantero, justo en el reposamuñecas.
-   *
-   * La bisagra sube a z=0.725: 6 cm de margen contra los dedos, frente al 1 cm
-   * justo de la vuelta anterior.
-   *
-   * TOPE por este lado: pasado z≈0.487 la muñeca se sale por delante del
-   * portátil y se quedaría tecleando en el aire.
+   * TOPE: pasado z≈0.487 la muñeca se sale por delante y teclea en el aire.
    */
   FRONT_Z: 0.45,
 
   /**
-   * Teclado y trackpad como fracción del fondo, con las proporciones REALES
-   * de un MacBook: el teclado va del 35% al 81% del fondo (centro al 58%) y
-   * el trackpad al 20%. Antes estaba centrado al 70% y por eso las manos
-   * caían siempre sobre el canto de atrás.
+   * Proporciones reales de un MacBook: el teclado va del 35 % al 81 % del
+   * fondo y el trackpad al 20 %.
    */
   KEYS_CENTER: 0.58,
   KEYS_DEPTH: 0.46,
@@ -108,10 +78,9 @@ const CHAIR = {
  *  ------------------------------------------------------------------ */
 
 /**
- * Caja con esquinas redondeadas y cantos biselados: perfil en XY extruido en
- * Z. Es la pieza clave del salto de realismo — una BoxGeometry pelada tiene
- * los cantos infinitamente vivos y NUNCA capta un brillo especular, que es
- * justo lo que hace que un render se lea como "cajas" en vez de como objetos.
+ * Caja con esquinas redondeadas y cantos biselados. Es lo que separa un render
+ * de "cajas" de uno de objetos: una BoxGeometry pelada tiene los cantos vivos
+ * y nunca capta un brillo especular.
  */
 function roundedBoxGeometry(w: number, h: number, d: number, radius: number): THREE.ExtrudeGeometry {
   const r = Math.max(0.0005, Math.min(radius, w / 2 - 0.001, h / 2 - 0.001));
@@ -276,16 +245,11 @@ function deskGrainTexture(): THREE.CanvasTexture {
  *  ------------------------------------------------------------------ */
 
 /**
- * Env map propio para los materiales metálicos, generado de una
- * RoomEnvironment. Mismo tratamiento que recibe la moto (ver MotorbikeProp) y
- * por el mismo motivo: un material con metalness alto NO tiene componente
- * difusa — solo refleja. Sin nada que reflejar, el aluminio del MacBook se
- * renderiza prácticamente negro por mucho que se le suba el color.
+ * Env map para los metales. Un material con metalness alto no tiene componente
+ * difusa: solo refleja, así que sin nada que reflejar el aluminio sale negro.
  *
- * Solo a los materiales METÁLICOS (metalness >= 0.5): aplicándolo a todos, la
- * RoomEnvironment —que es un estudio claro— levanta también el tablero y la
- * tapicería y el mueble entero se va a gris claro, fuera de la paleta oscura
- * del sitio.
+ * Solo a metalness >= 0.5. Aplicado a todo, la RoomEnvironment (un estudio
+ * claro) levanta también tablero y tapicería y el mueble se va a gris.
  */
 function applyPropEnvironment(root: THREE.Object3D, renderer: THREE.WebGLRenderer, intensity: number): void {
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -315,7 +279,20 @@ function applyPropEnvironment(root: THREE.Object3D, renderer: THREE.WebGLRendere
 /** ---------------------------------------------------------------------
  *  El puesto completo
  *  ------------------------------------------------------------------ */
-export function buildDeskSetup(renderer: THREE.WebGLRenderer): THREE.Group {
+export interface DeskSetup {
+  group: THREE.Group;
+  /** Editor de la pantalla del portátil. */
+  screen: CodeScreen;
+  /** Luz que emite la pantalla, para el parpadeo. */
+  screenLight: THREE.PointLight;
+  /** Tira LED del canto de la mesa: brilla más cerca del puntero. */
+  led: THREE.Mesh;
+  /** Retiñe todo lo que va en color de acento. */
+  setAccent(hex: number): void;
+  dispose(): void;
+}
+
+export function buildDeskSetup(renderer: THREE.WebGLRenderer): DeskSetup {
   const g = new THREE.Group();
 
   const grain = deskGrainTexture();
@@ -327,39 +304,44 @@ export function buildDeskSetup(renderer: THREE.WebGLRenderer): THREE.Group {
   // que es lo que le da el reflejo).
   const alu = new THREE.MeshStandardMaterial({ color: 0xd6d6dc, roughness: 0.22, metalness: 0.92 });
   const aluDark = new THREE.MeshStandardMaterial({ color: 0x4e4f56, roughness: 0.35, metalness: 0.8 });
-  const black = new THREE.MeshStandardMaterial({ color: 0x08080a, roughness: 0.45, metalness: 0.25 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x131318, roughness: 0.45, metalness: 0.25 });
   const deskTopMat = new THREE.MeshStandardMaterial({
-    color: 0x15151a,
+    color: 0x26262e,
     roughness: 0.5,
     metalness: 0.2,
     roughnessMap: grain,
   });
-  const steel = new THREE.MeshStandardMaterial({ color: 0x2b2b33, roughness: 0.35, metalness: 0.75 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x3d3d47, roughness: 0.35, metalness: 0.75 });
   const upholstery = new THREE.MeshStandardMaterial({
-    color: 0x131318,
+    color: 0x22222b,
     roughness: 0.85,
     metalness: 0.04,
     bumpMap: fabric,
     bumpScale: 0.012,
   });
   const upholsteryAlt = new THREE.MeshStandardMaterial({
-    color: 0x1e2038,
+    color: 0x2c2f4a,
     roughness: 0.8,
     metalness: 0.05,
     bumpMap: fabric,
     bumpScale: 0.012,
   });
+  const accent = cssColorHex('--accent', 0x6e7bff);
   const accentGlow = new THREE.MeshStandardMaterial({
-    color: 0x6e7bff,
-    emissive: 0x6e7bff,
+    color: accent,
+    emissive: accent,
     emissiveIntensity: 1.7,
     roughness: 0.4,
   });
+  // La pantalla muestra código de verdad: es una textura de canvas que se
+  // escribe sola conforme avanza el scroll (ver CodeScreen).
+  const screen = new CodeScreen();
   const displayMat = new THREE.MeshStandardMaterial({
-    color: 0x0a0d24,
-    emissive: 0x5866e8,
-    emissiveIntensity: 0.9,
-    roughness: 0.2,
+    map: screen.texture,
+    emissiveMap: screen.texture,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.85,
+    roughness: 0.25,
   });
   const keysMat = new THREE.MeshStandardMaterial({ map: keyboardTexture(), roughness: 0.7, metalness: 0.15 });
 
@@ -383,14 +365,17 @@ export function buildDeskSetup(renderer: THREE.WebGLRenderer): THREE.Group {
   crossbar.position.set(DESK.CX, 0.12, DESK.CZ + legZ);
 
   // Tira LED bajo el canto delantero: el detalle que más dice "setup gaming".
-  const led = panel(DESK.W - 0.16, 0.012, 0.014, 0.005, accentGlow);
+  // Material propio (no el compartido) para poder subirle el brillo cuando el
+  // puntero se acerca sin afectar al resto de piezas de acento.
+  const ledMat = accentGlow.clone();
+  const led = panel(DESK.W - 0.16, 0.012, 0.014, 0.005, ledMat);
   led.position.set(DESK.CX, DESK.TOP_Y - DESK.THICK - 0.012, DESK.CZ - DESK.D / 2 + 0.025);
 
   // Alfombrilla grande de tela. Además de ser el accesorio que más grita
   // "puesto de verdad", cumple una función de render: rompe el plano negro
   // liso del tablero, que sin nada encima se lee como una superficie vacía.
   const matMat = new THREE.MeshStandardMaterial({
-    color: 0x191a21,
+    color: 0x26272f,
     roughness: 0.92,
     metalness: 0.03,
     bumpMap: fabric,
@@ -402,8 +387,8 @@ export function buildDeskSetup(renderer: THREE.WebGLRenderer): THREE.Group {
   // Con el emisivo a tope (el mismo accentGlow de la tira LED) se leía como un
   // neón rectangular sobre la mesa, así que aquí va una versión atenuada.
   const trimMat = new THREE.MeshStandardMaterial({
-    color: 0x3d45a8,
-    emissive: 0x6e7bff,
+    color: accent,
+    emissive: accent,
     emissiveIntensity: 0.32,
     roughness: 0.6,
   });
@@ -646,19 +631,11 @@ export function buildDeskSetup(renderer: THREE.WebGLRenderer): THREE.Group {
   // taza se leía como un borrón junto a su mano.
   const mugMat = new THREE.MeshStandardMaterial({ color: 0x33343e, roughness: 0.38, metalness: 0.15 });
   /**
-   * La taza va agrupada para poder recolocarla de un solo sitio, y su sitio
-   * NO se elige a ojo. Estaba en (-0.30, 0.62), a 30 cm de su mano derecha en
-   * 3D, y aun así parecía que la agarraba como un ratón: es un solape de
-   * PROYECCIÓN, no de posición. La cámara mira esta escena en diagonal (su
-   * dirección, en coordenadas locales, es ≈ (0.58, -0.81)), así que lo que
-   * decide dónde cae algo en pantalla no es su X sino 0.81·x + 0.58·z:
-   *
-   *   taza en (-0.30, 0.62)  ->  0.118      mano derecha  ->  0.267
-   *
-   * Solo 0.15 de separación, con la taza además más cerca de cámara y por
-   * tanto más grande: se le montaba encima de la mano. En (-0.48, 0.44) el
-   * valor baja a -0.13, que cae en el tablero libre a la derecha de su
-   * silueta (el hombro derecho está en -0.06) — bien lejos de las dos manos.
+   * La posición de la taza no se elige a ojo: la cámara mira en diagonal, así
+   * que lo que decide dónde cae algo en pantalla no es su X sino 0.81·x+0.58·z.
+   * En (-0.30, 0.62) ese valor daba 0.118 contra 0.267 de su mano derecha y
+   * parecía que la agarraba; en (-0.48, 0.44) baja a -0.13 y cae en el tablero
+   * libre, lejos de las dos manos.
    */
   const mugGroup = new THREE.Group();
   mugGroup.position.set(-0.48, DESK.TOP_Y, 0.44);
@@ -716,6 +693,12 @@ export function buildDeskSetup(renderer: THREE.WebGLRenderer): THREE.Group {
   rim.position.set(-0.68, 1.2, -0.85);
   g.add(rim);
 
+  // Luz cenital suave. Sin ella el mueble solo lo alcanza la pantalla del
+  // portátil y la mitad del puesto se queda en negro.
+  const overhead = new THREE.PointLight(0xfff2e0, 2.6, 4.5, 2);
+  overhead.position.set(0.1, 2.1, 0.35);
+  g.add(overhead);
+
   // Sin sombras a propósito: el plano de suelo de la escena está en y = -1.02,
   // un metro por debajo de los pies, así que cualquier sombra proyectada cae
   // despegada del mueble. Mejor ninguna que una flotando.
@@ -725,5 +708,31 @@ export function buildDeskSetup(renderer: THREE.WebGLRenderer): THREE.Group {
   });
 
   applyPropEnvironment(g, renderer, 0.5);
-  return g;
+
+  const accentMaterials = [accentGlow, trimMat, ledMat];
+
+  return {
+    group: g,
+    screen,
+    screenLight,
+    led,
+    setAccent(hex: number): void {
+      for (const material of accentMaterials) {
+        material.color.setHex(hex);
+        material.emissive.setHex(hex);
+      }
+      screenLight.color.setHex(hex).lerp(new THREE.Color(0xffffff), 0.45);
+    },
+    dispose(): void {
+      screen.dispose();
+      g.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry.dispose();
+        for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+          m.dispose();
+        }
+      });
+    },
+  };
 }

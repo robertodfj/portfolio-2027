@@ -108,6 +108,7 @@
     "drag": "Drag to explore",
     "demo": "View demo ↗",
     "code": "View code ↗",
+    "private": "This project is private",
     "prev": "Previous project",
     "next": "Next project",
     "goTo": "Go to project {{ title }}",

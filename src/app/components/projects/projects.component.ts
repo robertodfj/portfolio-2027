@@ -19,6 +19,13 @@ interface Project {
   index: string;
   icon?: string;
   stack: string[];
+  /**
+   * Repositorio privado. Cuando es true la tarjeta muestra el botón de
+   * GitHub bloqueado (candado + aviso al pasar el ratón) e ignora
+   * githubUrl: basta cambiar este flag para abrir o cerrar el código
+   * de un proyecto.
+   */
+  isPrivate: boolean;
   githubUrl?: string;
   demoUrl?: string;
 }
@@ -37,34 +44,46 @@ export class ProjectsComponent implements AfterViewInit {
   readonly projects: Project[] = [
     {
       index: 'rm',
-      icon: '🤖',
+      icon: '🤖',
       stack: ['.NET', 'C#', 'JWT', 'Telegram API', 'SQL'],
+      isPrivate: false,
+      githubUrl: 'https://github.com/robertodfj/rick-morty',
     },
     {
       index: 'ma',
-      icon: '🍽️',
+      icon: '🍽️',
       stack: ['Java', 'Android Studio', 'Room', 'LiveData'],
+      isPrivate: false,
+      githubUrl:
+        'https://github.com/robertodfj/meseroAPP-Proyecto-Intermodular',
     },
     {
       index: 'mw',
-      icon: '🍽️',
+      icon: '🍽️',
       stack: ['Java', 'Spring Boot'],
+      isPrivate: true,
       demoUrl: 'https://www.youtube.com/watch?v=n2fKeVxJVg8&t=1s',
     },
     {
       index: 'mc',
-      icon: '☁️',
+      icon: '☁️',
       stack: ['Java', 'Multithreading', 'Encryption'],
+      isPrivate: false,
+      githubUrl: 'https://github.com/robertodfj/MiniCloud',
     },
     {
       index: 'tf',
-      icon: '📋',
+      icon: '📋',
       stack: ['Spring Boot', 'React'],
+      isPrivate: false,
+      githubUrl: 'https://github.com/robertodfj/TaskFlow',
     },
     {
       index: 'rps',
-      icon: '✊',
+      icon: '✊',
       stack: ['Java', 'OpenCV'],
+      isPrivate: false,
+      githubUrl: 'https://github.com/robertodfj/rock-paper-scissors',
     },
   ];
 

@@ -527,6 +527,8 @@
 
     display: flex;
 
+    align-items: center;
+
     flex-wrap: wrap;
 
     gap:
@@ -535,6 +537,178 @@
     margin-top:
       0.15rem;
   }
+
+
+  /* ==========================================================
+     GITHUB (mismo lenguaje que el selector de idioma:
+     disco pequeño con anillo, el icono llena el círculo)
+     ========================================================== */
+
+  &__gh {
+    width: 2.2rem;
+    height: 2.2rem;
+
+    flex: 0 0 auto;
+
+    padding: 0;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    border:
+      1px solid var(--edge);
+
+    background:
+      var(--surface-soft);
+
+    color:
+      var(--ink-dim);
+
+    cursor: pointer;
+
+    transition:
+      color 0.3s ease,
+
+      background 0.3s ease,
+
+      border-color 0.3s ease,
+
+      transform 0.4s cubic-bezier(0.22,
+        1,
+        0.36,
+        1);
+
+
+    svg {
+      width: 1.05rem;
+      height: 1.05rem;
+
+      display: block;
+    }
+
+
+    &:hover {
+      color:
+        var(--accent);
+
+      background:
+        rgba(var(--accent-rgb), 0.08);
+
+      border-color:
+        rgba(var(--accent-rgb), 0.35);
+
+      transform:
+        translateY(-2px);
+    }
+
+
+    /*
+     * Privado: apagado y sin interacción. Mantiene la misma
+     * silueta que el botón activo para que la fila no salte.
+     */
+    &--locked {
+      cursor: not-allowed;
+
+      opacity: 0.5;
+
+      color:
+        var(--ink-faint);
+
+
+      &:hover {
+        color:
+          var(--ink-faint);
+
+        background:
+          var(--surface-soft);
+
+        border-color:
+          var(--edge);
+
+        transform: none;
+      }
+    }
+  }
+
+
+  /* ==========================================================
+     AVISO DE PRIVADO
+     ========================================================== */
+
+  &__lock {
+    position: relative;
+
+    display: inline-flex;
+  }
+
+
+  &__tooltip {
+    position: absolute;
+
+    bottom:
+      calc(100% + 0.5rem);
+
+    left: 0;
+
+    z-index: 5;
+
+    white-space: nowrap;
+
+    padding:
+      0.45em 0.7em;
+
+    border-radius: 9px;
+
+    font-family:
+      var(--font-mono);
+
+    font-size:
+      0.62rem;
+
+    line-height: 1;
+
+    color:
+      var(--ink);
+
+    background:
+      var(--stage-raised);
+
+    border:
+      1px solid var(--edge-strong);
+
+    box-shadow:
+      0 10px 26px var(--shadow-strong);
+
+    opacity: 0;
+
+    transform:
+      translateY(4px);
+
+    pointer-events: none;
+
+    transition:
+      opacity 0.28s ease,
+
+      transform 0.28s cubic-bezier(0.22,
+        1,
+        0.36,
+        1);
+  }
+}
+
+
+/*
+ * El aviso cuelga del wrapper: un button deshabilitado no dispara
+ * :hover de forma fiable en todos los navegadores.
+ */
+.project-card__lock:hover .project-card__tooltip,
+.project-card__lock:focus-within .project-card__tooltip {
+  opacity: 1;
+
+  transform:
+    translateY(0);
 }
 
 
@@ -713,5 +887,19 @@
   .projects__hint {
     animation:
       none;
+  }
+
+
+  .project-card__tooltip {
+    transition:
+      opacity 0.15s ease;
+
+    transform: none;
+  }
+
+
+  .project-card__lock:hover .project-card__tooltip,
+  .project-card__lock:focus-within .project-card__tooltip {
+    transform: none;
   }
 }

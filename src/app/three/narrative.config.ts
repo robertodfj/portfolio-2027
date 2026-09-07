@@ -651,6 +651,10 @@ export const DESK = {
    * escena se le monta encima. Restando esto a la X de la cámara y del punto
    * al que mira, el conjunto se va hacia el borde derecho y el texto se lee
    * limpio, sin tocar el encuadre de escritorio.
+   *
+   * Es un equilibrio, no un "cuanto más mejor": pasado -0.3 el portátil —que
+   * cae al lado derecho de la escena— se sale del cuadro, y quedarse sin el
+   * portátil es peor que solaparse un poco con el texto.
    */
-  MOBILE_CAMERA_SHIFT_X: -0.45,
+  MOBILE_CAMERA_SHIFT_X: -0.26,
 } as const;

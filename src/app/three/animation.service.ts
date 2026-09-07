@@ -17,7 +17,8 @@ import {
 } from './character-timeline';
 import { MotorbikeProp } from './motorbike-prop';
 import { buildMotorcycleRider } from './motorcycle-rider';
-import { buildDeskSetup, buildParticleField } from './scene-props';
+import { buildDeskSetup } from './desk-setup';
+import { buildParticleField } from './scene-props';
 import { PointerInteractionService } from './pointer-interaction.service';
 import { AMBIENT, DESK, MOTORBIKE, RIDER } from './narrative.config';
 

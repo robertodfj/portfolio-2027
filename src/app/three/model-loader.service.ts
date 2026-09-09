@@ -109,9 +109,12 @@ export class ModelLoaderService {
    * Carga /assets/models/roberto.glb. Si el fichero falta, no parsea o tarda
    * demasiado, resuelve con un personaje suplente en vez de colgarse.
    */
-  async loadCharacter(path = 'assets/models/roberto.glb'): Promise<CharacterController> {
+  async loadCharacter(
+    path = 'assets/models/roberto.glb',
+    timeoutMs = 15000,
+  ): Promise<CharacterController> {
     try {
-      const gltf = await this.withTimeout(this.loader.loadAsync(path), 15000);
+      const gltf = await this.withTimeout(this.loader.loadAsync(path), timeoutMs);
       this.afinarTexturas(gltf.scene);
       return new GltfCharacter(gltf);
     } catch (err) {

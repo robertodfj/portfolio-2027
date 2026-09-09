@@ -31,7 +31,8 @@ const path = require('path');
 const puppeteer = require('puppeteer-core');
 const { abrirGlb } = require('./lib/mesh-uv');
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const { resolverChrome } = require('./lib/chrome');
+const CHROME = resolverChrome();
 const MODELO = 'src/assets/models/roberto.glb';
 const SALIDA = 'textura-roberto';
 const VACIO = -1;

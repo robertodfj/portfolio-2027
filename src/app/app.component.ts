@@ -19,6 +19,7 @@ import { ThreeSceneService, WebGLUnavailableError } from './three/three-scene.se
 import { CameraService } from './three/camera.service';
 import { ModelLoaderService } from './three/model-loader.service';
 import { AnimationService } from './three/animation.service';
+import { LOADING } from './three/narrative.config';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { LoadingScreenComponent } from './components/loading-screen/loading-screen.component';
 import { HeroComponent } from './components/hero/hero.component';
@@ -53,6 +54,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   private readonly accent = inject(AccentService);
 
   readonly loading = signal(true);
+  /** Dispara el fundido del velo; al terminar se desmonta. */
+  readonly loaderLeaving = signal(false);
   readonly usingPlaceholder = signal(false);
   readonly showScrollTop = signal(false);
   /** El navegador no puede pintar la escena: se avisa en vez de fallar en silencio. */
@@ -96,7 +99,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     // montado y se pasa antes de cargar ningún modelo.
     this.modelLoader.setMaxAnisotropy(this.sceneSvc.renderer.capabilities.getMaxAnisotropy());
 
-    const character = await this.modelLoader.loadCharacter();
+    // Presupuesto único para toda la carga. Cada espera se queda con lo que
+    // quede, de modo que el velo no puede durar más de LOADING.MAX_MS por muy
+    // mal que vaya la red.
+    const t0 = performance.now();
+    const restante = () => Math.max(0, LOADING.MAX_MS - (performance.now() - t0));
+
+    const character = await this.modelLoader.loadCharacter(undefined, restante());
     this.usingPlaceholder.set(character.usingPlaceholder);
 
     // Un único tick por frame: AnimationService orquesta desde ahí
@@ -104,9 +113,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     this.animationSvc.init(character, document.body);
     this.sceneSvc.startLoop(this.cameraSvc.camera);
 
-    // Pequeño margen para que el "LOADING" se lea a propósito y no como un
-    // parpadeo en conexiones rápidas.
-    window.setTimeout(() => this.loading.set(false), 600);
+    // Se descubre con la escena completa —moto montada y shaders compilados—,
+    // no en cuanto llega el personaje. Si el presupuesto se agota antes, se
+    // descubre igual y lo que falte entra después.
+    await Promise.race([this.animationSvc.whenReady(), espera(restante())]);
+
+    // Y nunca menos de MIN_MS, para que no sea un parpadeo en conexiones
+    // rápidas ni ahora que suele terminar antes.
+    await espera(LOADING.MIN_MS - (performance.now() - t0));
+
+    this.loaderLeaving.set(true);
+    window.setTimeout(() => this.loading.set(false), LOADING.FADE_MS);
 
     // Fuera de la zona: el scroll dispara cientos de eventos por segundo y no
     // hace falta un ciclo de detección de cambios por cada uno.
@@ -138,4 +155,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     window.removeEventListener('load', this.onLoad);
     this.animationSvc.dispose();
   }
+}
+
+/** Espera pasiva; con ms <= 0 cede solo un tick. */
+function espera(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, Math.max(0, ms)));
 }

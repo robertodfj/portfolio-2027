@@ -134,6 +134,19 @@ export class ThreeSceneService implements OnDestroy {
     this.updateCallbacks.push(cb);
   }
 
+  /**
+   * Compila shaders y sube texturas a la GPU antes del primer render.
+   *
+   * Sin esto, el primer frame que muestra un material nuevo compila su shader
+   * en mitad del bucle y produce un tirón — justo al descubrir la escena, que
+   * es el peor momento posible. Aquí ese coste se paga con la pantalla de
+   * carga todavía puesta.
+   */
+  async precompile(camera: THREE.Camera): Promise<void> {
+    if (!this.renderer) return;
+    await this.renderer.compileAsync(this.scene, camera);
+  }
+
   startLoop(camera: THREE.Camera): void {
     this.zone.runOutsideAngular(() => {
       const loop = () => {

@@ -8,7 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer-core');
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const { resolverChrome } = require('./lib/chrome');
+const CHROME = resolverChrome();
 const SIZES = [
   { file: 'src/favicon-32.png', size: 32 },
   { file: 'src/apple-touch-icon.png', size: 180 },

@@ -8,8 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer-core');
 
-const CHROME =
-  'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const { resolverChrome } = require('./lib/chrome');
+const CHROME = resolverChrome();
 
 const HTML = `<!doctype html>
 <meta charset="utf-8">

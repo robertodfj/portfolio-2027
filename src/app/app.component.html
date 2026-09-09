@@ -1,6 +1,6 @@
 <canvas #sceneCanvas class="scene-canvas" aria-hidden="true"></canvas>
 
-<app-loading-screen *ngIf="loading()"></app-loading-screen>
+<app-loading-screen *ngIf="loading()" [leaving]="loaderLeaving()"></app-loading-screen>
 
 <app-navbar />
 

@@ -5,6 +5,30 @@ import * as THREE from 'three';
  * aquí y no repartido por los servicios.
  */
 
+/* ----------------------------------------------------------------- 0. CARGA */
+export const LOADING = {
+  /**
+   * Tope total de la pantalla de carga, contado desde que arranca la escena.
+   *
+   * Se espera a tener TODOS los GLB montados y los shaders compilados antes de
+   * descubrir la escena, porque descubrirla a medias se ve peor que esperar:
+   * la moto apareciendo de la nada y el tirón de compilar el primer frame.
+   * Pero la espera nunca puede ser abierta, así que al agotarse este tope se
+   * descubre con lo que haya. Lo que falte llega después, que es exactamente
+   * lo que pasaba antes de forma permanente.
+   *
+   * 12 s da de sobra para los ~7.7 MB de GLB en una conexión normal y corta en
+   * seco las patológicas.
+   */
+  MAX_MS: 12000,
+
+  /** Mínimo en pantalla: por debajo de esto es un parpadeo, no una carga. */
+  MIN_MS: 600,
+
+  /** Fundido de salida. Debe coincidir con la transición del componente. */
+  FADE_MS: 600,
+} as const;
+
 /* ------------------------------------------------------------------ 1. SCROLL */
 export const SCROLL = {
   /**

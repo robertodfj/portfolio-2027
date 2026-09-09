@@ -13,7 +13,8 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer-core');
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const { resolverChrome } = require('./lib/chrome');
+const CHROME = resolverChrome();
 const RAIZ = path.resolve('dist/roberto-portfolio/browser');
 const PUERTO = 4456;
 const CAPTURAS = process.env.CAPTURAS;

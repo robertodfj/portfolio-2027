@@ -6,7 +6,15 @@
   align-items: center;
   justify-content: center;
   background: var(--stage);
-  animation: fadeOut 0.6s var(--easing) 0.55s forwards;
+
+  /* La duración debe coincidir con LOADING.FADE_MS de narrative.config.ts. */
+  opacity: 1;
+  transition: opacity 0.6s var(--easing);
+}
+
+:host(.is-leaving) {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .loader {
@@ -43,8 +51,4 @@
 @keyframes sweep {
   0% { transform: translateX(-120%); }
   100% { transform: translateX(360%); }
-}
-
-@keyframes fadeOut {
-  to { opacity: 0; visibility: hidden; pointer-events: none; }
 }

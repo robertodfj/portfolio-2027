@@ -53,6 +53,9 @@ export class AnimationService {
   private motorbike?: MotorbikeProp;
   private desk?: DeskSetup;
 
+  /** Se resuelve cuando la moto y el jinete están montados (o han fallado). */
+  private propsReady: Promise<void> = Promise.resolve();
+
   /**
    * Sin clip de reposo la suma de pesos caería a 0 y el mixer devolvería la
    * T-pose. Si falta el Idle, Walking se queda a peso 1 y su primer fotograma
@@ -143,8 +146,9 @@ export class AnimationService {
     this.scroll.trackSection(CONTACT_SECTION, DESK.CONTACT_SECTION_SELECTOR);
     this.scene.onUpdate(this.tick);
 
-    // La moto va aparte para no retrasar la entrada a la escena.
-    this.loadMotorbike().catch((err) => {
+    // La moto se carga en paralelo, pero ahora la promesa se guarda: quien
+    // levanta la pantalla de carga necesita poder esperarla.
+    this.propsReady = this.loadMotorbike().catch((err) => {
       console.warn('[AnimationService] La moto no pudo montarse.', err);
     });
 
@@ -154,6 +158,19 @@ export class AnimationService {
 
   refresh(): void {
     this.scroll.refresh();
+  }
+
+  /**
+   * Resuelve cuando la escena se puede descubrir sin costuras: props montados
+   * y shaders compilados.
+   *
+   * No lleva tope propio a propósito. El tope es una decisión de presentación
+   * —cuánto es razonable hacer esperar— y vive donde se decide descubrir la
+   * escena, no aquí.
+   */
+  async whenReady(): Promise<void> {
+    await this.propsReady;
+    await this.scene.precompile(this.cameraSvc.camera);
   }
 
   applyTheme(theme: 'dark' | 'light'): void {

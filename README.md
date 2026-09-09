@@ -32,7 +32,7 @@ El recorrido, en orden:
 | Capa | Tecnología |
 |---|---|
 | Framework | Angular 20, componentes standalone y signals |
-| 3D / WebGL | Three.js — `GLTFLoader`, `DRACOLoader`, `AnimationMixer`, `BokehPass` |
+| 3D / WebGL | Three.js — `GLTFLoader`, `DRACOLoader`, `AnimationMixer` |
 | Scroll | GSAP + `ScrollTrigger` |
 | i18n | ngx-translate, con los textos en `assets/i18n/*.json` |
 | Estilos | SCSS con tokens de diseño y tema claro/oscuro |
@@ -57,7 +57,7 @@ src/
  │   │   ├── character-timeline.ts    funciones PURAS de progress -> estado
  │   │   ├── scroll-progress.service  única fuente del scroll, normalizado [0,1]
  │   │   ├── animation.service.ts     orquestador: scroll -> timeline -> escena
- │   │   ├── three-scene.service.ts   renderer, luces, postprocesado, render loop
+ │   │   ├── three-scene.service.ts   renderer, luces por tema y render loop
  │   │   ├── model-loader.service.ts  carga de GLB + personaje suplente
  │   │   ├── camera.service.ts        cámara y corrección de encuadre por aspecto
  │   │   ├── desk-setup.ts            mesa, silla y MacBook, construidos por código
@@ -129,15 +129,28 @@ npm run gen:og        # imagen de compartir (assets/images/og-cover.jpg)
 npm run gen:favicon   # rasteriza favicon.svg a PNG
 ```
 
-`gen:og` y `gen:favicon` usan Chrome a través de puppeteer-core; la ruta al
-navegador está al principio de cada script.
+Y para los modelos 3D:
+
+```bash
+npm run opt:models    # comprime la moto (Draco + texturas WebP a 1024)
+npm run fix:texture   # repara las costuras del atlas del personaje
+npm run swap:texture  # inyecta una textura en un GLB conservando rig y Draco
+```
+
+Todos los que abren un navegador usan Chrome a través de puppeteer-core; la ruta
+al ejecutable está al principio de cada script.
+
+**`opt:models` se niega a comprimir un modelo ya comprimido.** Draco y WebP son
+con pérdida: una segunda pasada decodifica y recodifica, y degrada la calidad a
+cambio de unos pocos KB. Si hay que rehacerlo, recupera antes el original con
+`git checkout -- src/assets/models/` y ejecútalo una sola vez.
 
 ## Rendimiento
 
 - Bundle inicial: ~283 kB transferidos.
 - Modelos comprimidos con Draco y texturas WebP a 1024 px.
 - Fuentes autoalojadas, solo subconjunto `latin`.
-- Sombras, antialiasing y desenfoque de profundidad desactivados por debajo de 768 px.
+- Sombras y antialiasing desactivados por debajo de 768 px, y menos partículas.
 - `NgZone.runOutsideAngular` en el render loop y en los listeners de scroll;
   todos los componentes en `OnPush`.
 
@@ -156,17 +169,25 @@ navegador está al principio de cada script.
 `dist/roberto-portfolio/browser` es estático. `src/_headers` trae CSP y cabeceras
 de caché para Netlify y Cloudflare Pages; en otros hosts hay que traducirlas.
 
-**Comprueba la CSP antes de desplegar:**
+**Comprueba antes de desplegar:**
 
 ```bash
 npm run build
-npm run check:csp
+npm run check:prod    # recorrido completo: temas, idiomas, secciones y móvil
+npm run check:csp     # solo la CSP, más rápido
 ```
 
-Sirve el build aplicando de verdad las cabeceras de `src/_headers` y falla si el
-navegador reporta cualquier violación o si el modelo 3D no llega a cargar. Un
-servidor estático normal no envía esas cabeceras, así que sin esta comprobación
-la CSP solo se prueba en producción.
+`check:prod` sirve el build aplicando de verdad las cabeceras de `src/_headers` y
+recorre la web en un navegador real: los dos temas, los dos idiomas, todas las
+secciones, el viewport de móvil y el modo de movimiento reducido. Falla con
+código 1 ante cualquier error de consola, violación de CSP, recurso que no cargue
+o si entra el personaje suplente en vez del modelo.
+
+Un servidor estático normal no envía esas cabeceras, así que sin esta
+comprobación la CSP solo se prueba en producción.
+
+Con `CAPTURAS=ruta` deja además una captura de cada paso, útil para revisar
+regresiones visuales a ojo.
 
 Tres cosas concretas que la CSP necesita y que no son obvias:
 
@@ -177,8 +198,16 @@ Tres cosas concretas que la CSP necesita y que no son obvias:
   `<link>` de estilos con `onload="this.media='all'"`, un manejador inline que la
   CSP bloquea, dejando la hoja de estilos sin aplicar.
 
-Antes de publicar, cambia `https://robertodfj.com/` por tu dominio real en
-`src/index.html` (canonical, Open Graph), `src/robots.txt` y `src/sitemap.xml`.
+**Antes de publicar, fija el dominio:**
+
+```bash
+npm run set:domain https://tudominio.com
+```
+
+Lo cambia de una vez en `src/index.html` (canonical, Open Graph, JSON-LD),
+`src/robots.txt` y `src/sitemap.xml`. Si no coincide con el dominio real, la
+vista previa al compartir el enlace sale en blanco y el canonical apunta a otro
+sitio.
 
 ---
 

@@ -9,10 +9,12 @@
     "gen:fonts": "node scripts/fonts.js",
     "gen:og": "node scripts/og-image.js",
     "gen:favicon": "node scripts/favicon.js",
-    "opt:models": "gltf-transform optimize src/assets/models/motorbike.glb src/assets/models/motorbike.glb --texture-size 1024 --texture-compress webp --compress draco",
+    "opt:models": "node scripts/optimize-models.js",
     "fix:texture": "node scripts/fix-texture-seams.js",
     "swap:texture": "node scripts/swap-texture.js",
-    "check:csp": "node scripts/check-csp.js"
+    "check:csp": "node scripts/check-csp.js",
+    "check:prod": "node scripts/check-prod.js",
+    "set:domain": "node scripts/set-domain.js"
   },
   "private": true,
   "dependencies": {

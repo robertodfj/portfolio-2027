@@ -57,7 +57,15 @@
               ],
               "outputHashing": "all",
               "sourceMap": false,
-              "namedChunks": false
+              "namedChunks": false,
+              "optimization": {
+                "scripts": true,
+                "fonts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                }
+              }
             },
             "development": {
               "optimization": false,

@@ -65,6 +65,16 @@ const IN_PLACE_STATES: readonly CharacterState[] = ['Walking'];
 export class ModelLoaderService {
   private readonly loader = new GLTFLoader();
 
+  /**
+   * Anisotropía máxima que soporta la GPU. Es lo que más limpia las costuras
+   * del personaje: su atlas no tiene separación entre zonas (más de la mitad
+   * de los bordes están pegados a otra parte del cuerpo), así que en las
+   * superficies vistas de canto el filtrado normal mezcla las dos y deja una
+   * raya de color piel sobre la ropa. El filtrado anisotrópico muestrea en la
+   * dirección correcta y esas rayas pasan de banda gruesa a pelo casi invisible.
+   */
+  private maxAnisotropy = 1;
+
   constructor() {
     // Los dos GLB vienen comprimidos con Draco, así que el decodificador es
     // obligatorio. Se sirve desde /assets y no desde un CDN de terceros: no
@@ -74,14 +84,35 @@ export class ModelLoaderService {
     this.loader.setDRACOLoader(draco);
   }
 
+  /** La pasa AppComponent en cuanto existe el renderer, antes de cargar nada. */
+  setMaxAnisotropy(valor: number): void {
+    this.maxAnisotropy = Math.max(1, valor);
+  }
+
+  /** Aplica la anisotropía a todas las texturas de un GLB recién cargado. */
+  private afinarTexturas(root: THREE.Object3D): void {
+    root.traverse((obj: THREE.Object3D) => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        for (const clave of ['map', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'normalMap'] as const) {
+          const textura = (material as THREE.MeshStandardMaterial)[clave];
+          if (!textura) continue;
+          textura.anisotropy = this.maxAnisotropy;
+          textura.needsUpdate = true;
+        }
+      }
+    });
+  }
+
   /**
-   * Carga /assets/models/roberto.glb. Si el fichero falta, no parsea, O tarda
-   * demasiado (p. ej. el decodificador Draco del CDN se atasca), resuelve con
-   * un placeholder procedural en vez de colgarse para siempre.
+   * Carga /assets/models/roberto.glb. Si el fichero falta, no parsea o tarda
+   * demasiado, resuelve con un personaje suplente en vez de colgarse.
    */
   async loadCharacter(path = 'assets/models/roberto.glb'): Promise<CharacterController> {
     try {
       const gltf = await this.withTimeout(this.loader.loadAsync(path), 15000);
+      this.afinarTexturas(gltf.scene);
       return new GltfCharacter(gltf);
     } catch (err) {
       console.warn(
@@ -99,6 +130,7 @@ export class ModelLoaderService {
   async loadProp(path: string, timeoutMs = 20000): Promise<THREE.Group | null> {
     try {
       const gltf = await this.withTimeout(this.loader.loadAsync(path), timeoutMs);
+      this.afinarTexturas(gltf.scene);
       return gltf.scene;
     } catch (err) {
       console.warn(`[ModelLoaderService] No se pudo cargar el prop "${path}".`, err);

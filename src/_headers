@@ -5,7 +5,11 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  # 'wasm-unsafe-eval' es obligatorio: el decodificador Draco es WebAssembly y
+  # sin él el navegador no puede instanciarlo, así que el personaje no carga.
+  # blob: en connect-src e img-src también: GLTFLoader extrae las texturas del
+  # GLB a URLs blob: y las pide con fetch.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' blob:; worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
 
 # Los ficheros con hash en el nombre no cambian nunca: se cachean para siempre.
 /*.js

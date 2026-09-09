@@ -156,6 +156,27 @@ navegador está al principio de cada script.
 `dist/roberto-portfolio/browser` es estático. `src/_headers` trae CSP y cabeceras
 de caché para Netlify y Cloudflare Pages; en otros hosts hay que traducirlas.
 
+**Comprueba la CSP antes de desplegar:**
+
+```bash
+npm run build
+npm run check:csp
+```
+
+Sirve el build aplicando de verdad las cabeceras de `src/_headers` y falla si el
+navegador reporta cualquier violación o si el modelo 3D no llega a cargar. Un
+servidor estático normal no envía esas cabeceras, así que sin esta comprobación
+la CSP solo se prueba en producción.
+
+Tres cosas concretas que la CSP necesita y que no son obvias:
+
+- `'wasm-unsafe-eval'` en `script-src` — el decodificador Draco es WebAssembly.
+- `blob:` en `connect-src` e `img-src` — GLTFLoader extrae las texturas del GLB
+  a URLs `blob:` y las pide con `fetch`.
+- `inlineCritical` desactivado en `angular.json` — esa optimización reescribe el
+  `<link>` de estilos con `onload="this.media='all'"`, un manejador inline que la
+  CSP bloquea, dejando la hoja de estilos sin aplicar.
+
 Antes de publicar, cambia `https://robertodfj.com/` por tu dominio real en
 `src/index.html` (canonical, Open Graph), `src/robots.txt` y `src/sitemap.xml`.
 

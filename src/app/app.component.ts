@@ -92,6 +92,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       throw err;
     }
 
+    // La anisotropía depende de la GPU, así que se consulta al renderer ya
+    // montado y se pasa antes de cargar ningún modelo.
+    this.modelLoader.setMaxAnisotropy(this.sceneSvc.renderer.capabilities.getMaxAnisotropy());
+
     const character = await this.modelLoader.loadCharacter();
     this.usingPlaceholder.set(character.usingPlaceholder);
 

@@ -144,6 +144,15 @@ export class ProjectsComponent implements AfterViewInit {
   }
 
   onPointerDown(event: PointerEvent): void {
+    // Solo con ratón. En táctil el arrastre lo hace el propio navegador: es
+    // scroll nativo, con inercia y encaje, y sobre todo sabe distinguir un
+    // gesto vertical (pasar página) de uno horizontal (mover el carrusel).
+    //
+    // Emulándolo a mano se capturaba el puntero en cuanto tocabas la sección,
+    // así que un dedo apoyado sobre las tarjetas bloqueaba el scroll de la
+    // página. Justo lo que pasaba en móvil sobre "Cosas que he construido".
+    if (event.pointerType !== 'mouse') return;
+
     const track = this.trackRef.nativeElement;
 
     this.dragging = true;

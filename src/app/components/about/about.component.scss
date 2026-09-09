@@ -208,11 +208,26 @@
   .about {
     padding: 5rem var(--section-pad-x);
 
+    /* La moto va centrada en móvil (MOTORBIKE.SCREEN_X_MOBILE), así que se le
+       abre una banda propia: por encima del texto y otra antes de las
+       tarjetas. Antes el bloque iba seguido y la moto quedaba por detrás,
+       tapando lo que había que leer. */
+    &__lead {
+      margin-top: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
     &__traits {
       /* Una sola columna: con el texto completo, dos quedan ilegibles. */
       grid-template-columns: minmax(0, 1fr);
 
       gap: 0.75rem;
+
+      /* Banda para la moto, que en móvil va centrada y a una altura FIJA de
+         pantalla mientras el texto pasa por detrás. Medida sobre la escena:
+         ocupa ~24vh de alto centrada al ~47vh, así que 30vh la despejan.
+         Es el único número que hay que tocar si se quiere más o menos aire. */
+      margin-top: 30vh;
     }
   }
 

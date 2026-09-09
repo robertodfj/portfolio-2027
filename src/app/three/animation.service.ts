@@ -53,9 +53,6 @@ export class AnimationService {
   private motorbike?: MotorbikeProp;
   private desk?: DeskSetup;
 
-  /** Se resuelve cuando la moto y el jinete están montados (o han fallado). */
-  private propsReady: Promise<void> = Promise.resolve();
-
   /**
    * Sin clip de reposo la suma de pesos caería a 0 y el mixer devolvería la
    * T-pose. Si falta el Idle, Walking se queda a peso 1 y su primer fotograma
@@ -146,12 +143,6 @@ export class AnimationService {
     this.scroll.trackSection(CONTACT_SECTION, DESK.CONTACT_SECTION_SELECTOR);
     this.scene.onUpdate(this.tick);
 
-    // La moto se carga en paralelo, pero ahora la promesa se guarda: quien
-    // levanta la pantalla de carga necesita poder esperarla.
-    this.propsReady = this.loadMotorbike().catch((err) => {
-      console.warn('[AnimationService] La moto no pudo montarse.', err);
-    });
-
     // Primer frame determinista: nada de salto inicial.
     this.apply(this.scroll.raw);
   }
@@ -161,16 +152,28 @@ export class AnimationService {
   }
 
   /**
-   * Resuelve cuando la escena se puede descubrir sin costuras: props montados
-   * y shaders compilados.
-   *
-   * No lleva tope propio a propósito. El tope es una decisión de presentación
-   * —cuánto es razonable hacer esperar— y vive donde se decide descubrir la
-   * escena, no aquí.
+   * Resuelve cuando lo que se ve en el PRIMER encuadre está listo: por ahora,
+   * los shaders compilados. Evita el tirón del primer frame y cuesta
+   * milisegundos, no megabytes.
    */
   async whenReady(): Promise<void> {
-    await this.propsReady;
     await this.scene.precompile(this.cameraSvc.camera);
+  }
+
+  /**
+   * Arranca los props que no se ven de entrada. Se llama DESPUÉS de descubrir
+   * la escena, y no antes, por dos razones:
+   *
+   *  - la moto pesa 5 MB y no aparece hasta una pantalla más abajo, así que
+   *    tiene todo el hero de margen para llegar;
+   *  - descomprimir ese Draco bloquea el hilo principal. Cargándola durante la
+   *    espera, el velo no se podía ni retirar hasta que terminaba: medido, se
+   *    iba siempre 0,4 s después de recibirla, a 30 y a 6 Mbps.
+   */
+  loadDeferredProps(): Promise<void> {
+    return this.loadMotorbike().catch((err) => {
+      console.warn('[AnimationService] La moto no pudo montarse.', err);
+    });
   }
 
   applyTheme(theme: 'dark' | 'light'): void {
@@ -227,7 +230,11 @@ export class AnimationService {
           )
         : 0,
     );
-    motorbike.setPlacement(this.cameraSvc.camera.position.x, this.cameraSvc.visibleHalfWidth);
+    motorbike.setPlacement(
+      this.cameraSvc.camera.position.x,
+      this.cameraSvc.visibleHalfWidth,
+      this.scene.mobile ? MOTORBIKE.SCREEN_X_MOBILE : MOTORBIKE.SCREEN_X,
+    );
 
     // Three.js recalcula matrixWorld dentro de render(), que corre después de
     // este callback: sin esto el rayo iría un frame por detrás.

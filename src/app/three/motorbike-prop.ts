@@ -125,17 +125,18 @@ export class MotorbikeProp {
   }
 
   /**
-   * Coloca la moto en SCREEN_X del encuadre actual — el hueco a la derecha del
-   * texto — y la mete hacia dentro si el cuadro no da para mostrarla entera
-   * (ventanas estrechas, donde la cámara ya no puede alejarse más).
+   * Coloca la moto en `screenX` del encuadre actual —el hueco a la derecha del
+   * texto en escritorio, centrada en móvil— y la mete hacia dentro si el cuadro
+   * no da para mostrarla entera (ventanas estrechas, donde la cámara ya no
+   * puede alejarse más).
    */
-  setPlacement(cameraX: number, visibleHalfWidth: number): void {
+  setPlacement(cameraX: number, visibleHalfWidth: number, screenX: number = MOTORBIKE.SCREEN_X): void {
     // Con SCENE_SCALE el conjunto ocupa más que TARGET_HEIGHT en pantalla —
     // si este cálculo no lo supiera, en ventanas estrechas el 10% extra
     // podría salirse del borde sin que FRAME_PADDING lo detectase.
     const half = (MOTORBIKE.TARGET_HEIGHT * MOTORBIKE.SCENE_SCALE) / 2;
     const maxOffset = Math.max(0, visibleHalfWidth - half - MOTORBIKE.FRAME_PADDING);
-    const desired = MOTORBIKE.SCREEN_X * visibleHalfWidth;
+    const desired = screenX * visibleHalfWidth;
     this.root.position.x = cameraX + THREE.MathUtils.clamp(desired, -maxOffset, maxOffset);
   }
 

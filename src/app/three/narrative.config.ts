@@ -125,6 +125,14 @@ export const MOTORBIKE = {
   /** Posición horizontal como fracción del semiancho visible: el hueco a la derecha del texto. */
   SCREEN_X: 0.42,
 
+  /**
+   * En móvil, centrada. El texto pasa a ocupar todo el ancho, así que ya no
+   * hay "hueco a la derecha": desplazarla allí solo conseguía que se comiera
+   * las tarjetas por el lado. Centrada, el espacio que se le deja en la
+   * maquetación (ver about.component.scss) es suyo y no pisa nada.
+   */
+  SCREEN_X_MOBILE: 0,
+
   /** Altura y profundidad sí en mundo: no dependen del ancho de la ventana. */
   WORLD_Y: 0.9,
   WORLD_Z: -1.0,

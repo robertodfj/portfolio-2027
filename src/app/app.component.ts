@@ -113,9 +113,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     this.animationSvc.init(character, document.body);
     this.sceneSvc.startLoop(this.cameraSvc.camera);
 
-    // Se descubre con la escena completa —moto montada y shaders compilados—,
-    // no en cuanto llega el personaje. Si el presupuesto se agota antes, se
-    // descubre igual y lo que falte entra después.
+    // Se descubre con lo que SÍ se ve en el primer encuadre: el personaje y sus
+    // shaders compilados. Nada más.
     await Promise.race([this.animationSvc.whenReady(), espera(restante())]);
 
     // Y nunca menos de MIN_MS, para que no sea un parpadeo en conexiones
@@ -124,6 +123,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     this.loaderLeaving.set(true);
     window.setTimeout(() => this.loading.set(false), LOADING.FADE_MS);
+
+    // Y solo ahora la moto: su descompresión bloquea el hilo principal, así que
+    // durante la espera impedía retirar el velo. Tiene todo el hero de margen.
+    this.animationSvc.loadDeferredProps();
 
     // Fuera de la zona: el scroll dispara cientos de eventos por segundo y no
     // hace falta un ciclo de detección de cambios por cada uno.

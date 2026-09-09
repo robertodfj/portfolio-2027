@@ -90,7 +90,11 @@
 
     user-select: none;
 
-    touch-action: pan-y;
+    /* Ambos ejes al navegador: decide él según la dirección del gesto —
+       horizontal mueve el carrusel, vertical pasa página. Con `pan-y` el
+       desplazamiento horizontal táctil quedaba en manos del JS, que ya no
+       actúa en táctil. */
+    touch-action: auto;
 
 
     &::-webkit-scrollbar {

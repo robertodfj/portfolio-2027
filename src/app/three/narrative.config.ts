@@ -186,9 +186,6 @@ export const MOTORBIKE = {
  * la normalización de humanoides, hay que volver a medirlas todas.
  */
 export const RIDER = {
-  /** Mismo GLB que el personaje que camina, sin modificar. */
-  PATH: 'assets/models/roberto.glb',
-
   /** Punto de la cadera (Hips) sobre el asiento. */
   SEAT: new THREE.Vector3(-0.361, 0.437, 0),
 

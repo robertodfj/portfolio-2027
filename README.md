@@ -113,7 +113,7 @@ Si el modelo llega sin cargar, entra un personaje suplente procedural que
 responde al scroll igual que el real.
 
 **Comprime siempre los modelos antes de subirlos.** Sin comprimir, `motorbike.glb`
-pesaba 38 MB:
+pesaba 38 MB; optimizado pesa 1,8 MB:
 
 ```bash
 npm run opt:models
@@ -132,7 +132,7 @@ npm run gen:favicon   # rasteriza favicon.svg a PNG
 Y para los modelos 3D:
 
 ```bash
-npm run opt:models    # comprime la moto (Draco + texturas WebP a 1024)
+npm run opt:models    # regenera la moto desde el original (ver abajo)
 npm run fix:texture   # repara las costuras del atlas del personaje
 npm run swap:texture  # inyecta una textura en un GLB conservando rig y Draco
 ```
@@ -140,15 +140,28 @@ npm run swap:texture  # inyecta una textura en un GLB conservando rig y Draco
 Todos los que abren un navegador usan Chrome a través de puppeteer-core; la ruta
 al ejecutable está al principio de cada script.
 
-**`opt:models` se niega a comprimir un modelo ya comprimido.** Draco y WebP son
-con pérdida: una segunda pasada decodifica y recodifica, y degrada la calidad a
-cambio de unos pocos KB. Si hay que rehacerlo, recupera antes el original con
-`git checkout -- src/assets/models/` y ejecútalo una sola vez.
+**`opt:models` parte siempre del export original**, que saca del historial de git,
+nunca del fichero ya optimizado: se puede repetir sin encadenar pasadas con
+pérdida. Hornea el esqueleto (la moto no tiene animaciones), quita el cristal con
+`transmission` (obligaba a renderizar la escena dos veces por frame), une y
+simplifica mallas, y deja las texturas en WebP: color a 1024 y el resto a 512.
 
 ## Rendimiento
 
 - Bundle inicial: ~283 kB transferidos.
-- Modelos comprimidos con Draco y texturas WebP a 1024 px.
+- Modelos comprimidos con Draco y texturas WebP.
+- El jinete de la moto reutiliza el personaje ya cargado: `roberto.glb` se
+  descarga una sola vez.
+- La moto compila sus shaders y sube sus texturas a la GPU al cargar, repartido
+  entre frames, y no en el primer frame en que aparece.
+
+Para medirlo con la red y la CPU limitadas, como en el dominio:
+
+```bash
+npm run build
+npm run measure                  # red media (10 Mbps)
+RED=lenta CPU=4 npm run measure  # 4 Mbps y CPU de móvil
+```
 - Fuentes autoalojadas, solo subconjunto `latin`.
 - Sombras y antialiasing desactivados por debajo de 768 px, y menos partículas.
 - `NgZone.runOutsideAngular` en el render loop y en los listeners de scroll;

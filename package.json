@@ -14,6 +14,7 @@
     "swap:texture": "node scripts/swap-texture.js",
     "check:csp": "node scripts/check-csp.js",
     "check:prod": "node scripts/check-prod.js",
+    "measure": "node scripts/measure-load.js",
     "set:domain": "node scripts/set-domain.js"
   },
   "private": true,

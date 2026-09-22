@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { cssColorHex } from '../shared/browser.util';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 /** Cada etapa del narrativo scroll mapea a uno de estos estados. */
 export type CharacterState =
@@ -75,6 +76,17 @@ export class ModelLoaderService {
    */
   private maxAnisotropy = 1;
 
+  /**
+   * Copia intacta del personaje para el jinete de la moto. Antes el jinete
+   * volvía a pedir roberto.glb: otra descarga de 2,7 MB y otro Draco entero
+   * para el mismo modelo. La copia comparte geometría, texturas y materiales
+   * con el original (también en la GPU), así que cuesta casi nada.
+   *
+   * Se clona recién cargado, antes de normalizar y de que el mixer lo mueva:
+   * la pose del jinete parte de la bind pose del export.
+   */
+  private riderSource: THREE.Group | null = null;
+
   constructor() {
     // Los dos GLB vienen comprimidos con Draco, así que el decodificador es
     // obligatorio. Se sirve desde /assets y no desde un CDN de terceros: no
@@ -116,6 +128,7 @@ export class ModelLoaderService {
     try {
       const gltf = await this.withTimeout(this.loader.loadAsync(path), timeoutMs);
       this.afinarTexturas(gltf.scene);
+      this.riderSource = cloneSkinned(gltf.scene) as THREE.Group;
       return new GltfCharacter(gltf);
     } catch (err) {
       console.warn(
@@ -124,6 +137,16 @@ export class ModelLoaderService {
       );
       return new PlaceholderCharacter();
     }
+  }
+
+  /**
+   * Entrega la copia del personaje para el jinete, una sola vez: dos dueños
+   * del mismo grafo se lo moverían el uno al otro. Null si cargó el suplente.
+   */
+  takeRiderScene(): THREE.Group | null {
+    const scene = this.riderSource;
+    this.riderSource = null;
+    return scene;
   }
 
   /**

@@ -20,7 +20,7 @@ import { buildMotorcycleRider } from './motorcycle-rider';
 import { buildDeskSetup, DeskSetup } from './desk-setup';
 import { buildParticleField } from './scene-props';
 import { PointerInteractionService } from './pointer-interaction.service';
-import { AMBIENT, DESK, MOTORBIKE, RIDER } from './narrative.config';
+import { AMBIENT, DESK, MOTORBIKE } from './narrative.config';
 import { AccentService } from '../shared/accent.service';
 import { SceneHintsService } from '../shared/scene-hints.service';
 import { DEFAULT_CODE } from '../shared/tech-catalog';
@@ -277,11 +277,12 @@ export class AnimationService {
   }
 
   private async loadMotorbike(): Promise<void> {
-    const [motorbikeScene, riderScene] = await Promise.all([
-      this.modelLoader.loadProp(MOTORBIKE.PATH),
-      this.modelLoader.loadProp(RIDER.PATH),
-    ]);
+    // Marcas para scripts/measure-load.js: no cuestan nada en producción.
+    performance.mark('moto:inicio');
+    const motorbikeScene = await this.modelLoader.loadProp(MOTORBIKE.PATH);
     if (!motorbikeScene) return;
+    const riderScene = this.modelLoader.takeRiderScene();
+    performance.mark('moto:parseada');
 
     this.motorbike = new MotorbikeProp(motorbikeScene, this.scene.renderer);
 
@@ -296,6 +297,44 @@ export class AnimationService {
     }
 
     this.scene.scene.add(this.motorbike.root);
+    await this.warmUp(this.motorbike.root);
+    performance.mark('moto:montada');
+  }
+
+  /**
+   * Deja la moto lista para pintarse antes de que aparezca. Sin esto, el primer
+   * frame en que entra en cuadro compila todos sus shaders y sube todas sus
+   * texturas a la GPU de golpe: medido, un tirón de entre 0,3 y 3 s justo al
+   * llegar a "Sobre mí".
+   *
+   * Las texturas se suben de una en una, una por frame, para que ninguna
+   * subida se coma el presupuesto de un frame entero.
+   */
+  private async warmUp(root: THREE.Object3D): Promise<void> {
+    const renderer = this.scene.renderer;
+
+    // compile() se salta lo invisible y la moto está oculta hasta su sección:
+    // se enciende solo mientras dura la llamada, que es síncrona.
+    const visible = root.visible;
+    root.visible = true;
+    const compiled = renderer.compileAsync(root, this.cameraSvc.camera, this.scene.scene);
+    root.visible = visible;
+    await compiled;
+
+    const textures = new Set<THREE.Texture>();
+    root.traverse((obj: THREE.Object3D) => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        for (const value of Object.values(material)) {
+          if ((value as THREE.Texture)?.isTexture) textures.add(value as THREE.Texture);
+        }
+      }
+    });
+    for (const texture of textures) {
+      renderer.initTexture(texture);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
   }
 
   /** progress -> estado de la escena. Determinista, sin memoria. */
